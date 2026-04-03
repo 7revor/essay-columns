@@ -55,7 +55,7 @@ export const DEFAULT_SETTINGS: LayoutSettings = {
   columns: 2,
   columnGapChars: 1,
   fontFamily: '"SimSun", "STSong", "Songti SC", serif',
-  fontSize: 5,
+  fontSize: 8,
   lineHeight: 1.2,
   titleAsFirstParagraph: true,
 };
