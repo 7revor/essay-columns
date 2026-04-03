@@ -29,23 +29,18 @@ export default function Preview({ pages, essayContents, settings }: Props) {
 
   const scale = userZoom ?? fitScale;
 
-  useEffect(() => {
+  const calcFitScale = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const calc = () => {
-      const targetW = Math.min(el.clientWidth * 0.8, 1280);
-      setFitScale(targetW / PAGE_W);
-    };
-    calc();
-    const ro = new ResizeObserver(calc);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [hasContent]);
+    const targetW = Math.min(el.clientWidth * 0.8, 1280);
+    setFitScale(targetW / PAGE_W);
+  }, []);
 
-  const zoomTo = useCallback(
-    (v: number) => setUserZoom(Math.round(Math.max(0.15, Math.min(3, v)) * 100) / 100),
-    [],
-  );
+  useEffect(() => {
+    calcFitScale();
+  }, [hasContent, calcFitScale]);
+
+  const zoomTo = useCallback((v: number) => setUserZoom(Math.round(Math.max(0.15, Math.min(3, v)) * 100) / 100), []);
 
   const colW = getColumnWidthMM(settings);
   const gapMM = getColumnGapMM(settings);
@@ -84,11 +79,9 @@ export default function Preview({ pages, essayContents, settings }: Props) {
             >
               +
             </button>
-            <span className="w-10 text-center text-[11px] tabular-nums text-gray-600">
-              {pct}%
-            </span>
+            <span className="w-10 text-center text-[11px] tabular-nums text-gray-600">{pct}%</span>
             <button
-              onClick={() => setUserZoom(null)}
+              onClick={() => { calcFitScale(); setUserZoom(null); }}
               className="rounded px-1.5 py-0.5 text-[11px] text-blue-600 hover:bg-blue-50"
             >
               适应
@@ -97,14 +90,9 @@ export default function Preview({ pages, essayContents, settings }: Props) {
         </div>
       )}
 
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-auto bg-gray-100"
-      >
+      <div ref={scrollRef} className="flex-1 overflow-auto bg-gray-100">
         {!hasContent ? (
-          <div className="flex h-full items-center justify-center text-gray-400">
-            暂无内容
-          </div>
+          <div className="flex h-full items-center justify-center text-gray-400">暂无内容</div>
         ) : (
           <div className="flex flex-col items-center gap-3 p-3 sm:gap-5 sm:p-5">
             {pages.map((page, pi) => (
@@ -131,8 +119,7 @@ export default function Preview({ pages, essayContents, settings }: Props) {
                     }}
                   >
                     {page.columns.map((col, ci) => {
-                      const leftMM =
-                        settings.marginLeft + ci * (colW + gapMM);
+                      const leftMM = settings.marginLeft + ci * (colW + gapMM);
                       return (
                         <div
                           key={ci}
@@ -147,23 +134,12 @@ export default function Preview({ pages, essayContents, settings }: Props) {
                             <div
                               key={idx}
                               style={{
-                                marginTop:
-                                  ei > 0
-                                    ? `${ESSAY_GAP_MM * MM_TO_PX}px`
-                                    : undefined,
-                                borderTop:
-                                  ei > 0
-                                    ? "0.3px dashed #bbb"
-                                    : undefined,
-                                paddingTop:
-                                  ei > 0
-                                    ? `${ESSAY_GAP_MM * 0.4 * MM_TO_PX}px`
-                                    : undefined,
+                                marginTop: ei > 0 ? `${ESSAY_GAP_MM * MM_TO_PX}px` : undefined,
+                                borderTop: ei > 0 ? "0.3px dashed #bbb" : undefined,
+                                paddingTop: ei > 0 ? `${ESSAY_GAP_MM * 0.4 * MM_TO_PX}px` : undefined,
                               }}
                               dangerouslySetInnerHTML={{
-                                __html: essayInnerHTML(
-                                  essayContents[idx],
-                                ),
+                                __html: essayInnerHTML(essayContents[idx]),
                               }}
                             />
                           ))}
@@ -172,9 +148,7 @@ export default function Preview({ pages, essayContents, settings }: Props) {
                     })}
                   </div>
                 </div>
-                <p className="mt-1 text-center text-[11px] text-gray-400">
-                  第 {pi + 1} 页
-                </p>
+                <p className="mt-1 text-center text-[11px] text-gray-400">第 {pi + 1} 页</p>
               </div>
             ))}
             <div className="h-2 shrink-0" />

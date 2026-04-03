@@ -10,7 +10,6 @@ export default defineConfig({
         manualChunks: {
           mammoth: ["mammoth"],
           react: ["react", "react-dom"],
-          pdfmake: ["pdfmake"],
         },
       },
     },
