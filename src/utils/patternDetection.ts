@@ -1,34 +1,24 @@
 import type { Essay, EssayContent, DetectedPattern } from "../types";
 
+const INFO_LINE_RE = /(?:姓名|班级)[：:]/;
+
 export function detectPatterns(
   essays: Essay[],
-  allLines: string[],
+  _allLines: string[],
 ): DetectedPattern[] {
   const patterns: DetectedPattern[] = [];
 
-  if (essays.length > 0) {
+  if (essays.length > 0 && essays[0].delimiter) {
     patterns.push({
-      id: "header",
-      label: "姓名/班级信息",
+      id: "delimiter",
+      label: `分隔标记: "${essays[0].delimiter.length > 30 ? essays[0].delimiter.slice(0, 30) + "…" : essays[0].delimiter}"`,
       count: essays.length,
-      examples: essays.slice(0, 2).map((e) => e.headerLine),
+      examples: [essays[0].delimiter],
       type: "header",
     });
   }
 
-  const SEPARATOR_RE = /^--\s*\d+\s*of\s*\d+\s*--$/;
-  const seps = allLines.filter((l) => SEPARATOR_RE.test(l.trim()));
-  if (seps.length > 0) {
-    patterns.push({
-      id: "separator",
-      label: `页码分隔线 (如 "${seps[0].trim()}")`,
-      count: seps.length,
-      examples: seps.slice(0, 2).map((l) => l.trim()),
-      type: "separator",
-    });
-  }
-
-  const paraFreq = new Map<string, { count: number; names: string[] }>();
+  const paraFreq = new Map<string, { count: number }>();
   for (const essay of essays) {
     const seen = new Set<string>();
     for (const p of essay.paragraphs) {
@@ -36,12 +26,8 @@ export function detectPatterns(
       if (!n || seen.has(n)) continue;
       seen.add(n);
       const e = paraFreq.get(n);
-      if (e) {
-        e.count++;
-        if (e.names.length < 3) e.names.push(essay.name);
-      } else {
-        paraFreq.set(n, { count: 1, names: [essay.name] });
-      }
+      if (e) e.count++;
+      else paraFreq.set(n, { count: 1 });
     }
   }
 
@@ -67,6 +53,7 @@ export function filterEssay(
   removedIds: Set<string>,
   patterns: DetectedPattern[],
   titleAsFirstParagraph: boolean,
+  stripInfoLines: boolean,
 ): EssayContent {
   const decorativeTexts = new Set<string>();
   for (const p of patterns) {
@@ -74,18 +61,35 @@ export function filterEssay(
     for (const ex of p.examples) decorativeTexts.add(ex);
   }
 
-  const filtered = essay.paragraphs.filter(
+  let filtered = essay.paragraphs.filter(
     (p) => !decorativeTexts.has(p.trim()),
   );
 
-  const result: EssayContent = {
+  let header: string | undefined;
+
+  if (stripInfoLines) {
+    const infoLines: string[] = [];
+    const rest: string[] = [];
+    for (const line of filtered) {
+      if (INFO_LINE_RE.test(line) && rest.length === 0) {
+        infoLines.push(line);
+      } else {
+        rest.push(line);
+      }
+    }
+    if (infoLines.length > 0) {
+      header = infoLines.join("  ");
+      filtered = rest;
+    }
+  }
+
+  if (!removedIds.has("delimiter") && essay.delimiter) {
+    header = essay.delimiter;
+  }
+
+  return {
+    header,
     title: titleAsFirstParagraph ? filtered[0] || "" : "",
     paragraphs: titleAsFirstParagraph ? filtered.slice(1) : filtered,
   };
-
-  if (!removedIds.has("header")) {
-    result.header = essay.headerLine;
-  }
-
-  return result;
 }

@@ -1,7 +1,5 @@
 export interface Essay {
-  name: string;
-  className: string;
-  headerLine: string;
+  delimiter: string;
   paragraphs: string[];
 }
 
@@ -29,6 +27,7 @@ export interface LayoutSettings {
   fontSize: number;
   lineHeight: number;
   titleAsFirstParagraph: boolean;
+  stripInfoLines: boolean;
 }
 
 export interface PageLayout {
@@ -64,4 +63,5 @@ export const DEFAULT_SETTINGS: LayoutSettings = {
   fontSize: 8,
   lineHeight: 1.2,
   titleAsFirstParagraph: true,
+  stripInfoLines: true,
 };

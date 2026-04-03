@@ -51,7 +51,7 @@ export default function App() {
       setRemovedIds(
         new Set(
           detected
-            .filter((p) => p.type !== "header" && p.count >= parsed.length - 2)
+            .filter((p) => p.type === "header" || p.count >= parsed.length - 2)
             .map((p) => p.id),
         ),
       );
@@ -68,10 +68,10 @@ export default function App() {
     () =>
       essays
         .map((e) =>
-          filterEssay(e, removedIds, patterns, settings.titleAsFirstParagraph),
+          filterEssay(e, removedIds, patterns, settings.titleAsFirstParagraph, settings.stripInfoLines),
         )
         .filter((c) => c.title || c.paragraphs.length > 0),
-    [essays, removedIds, patterns, settings.titleAsFirstParagraph],
+    [essays, removedIds, patterns, settings.titleAsFirstParagraph, settings.stripInfoLines],
   );
 
   useEffect(() => {

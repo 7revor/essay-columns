@@ -1,52 +1,118 @@
 import mammoth from "mammoth";
 import type { Essay } from "../types";
 
-const HEADER_RE = /姓名[：:]\s*(.+?)\s*班级[：:]\s*(.+)/;
-const SEPARATOR_RE = /^--\s*\d+\s*of\s*\d+\s*--$/;
+/**
+ * Find the best delimiter line that splits the document into essays.
+ *
+ * Strategy: count how many times each non-empty line appears. Lines that repeat
+ * many times and are short (likely headers/separators, not essay body) are
+ * candidates. Among candidates, pick the one whose occurrences are most evenly
+ * spaced — that line is the recurring essay boundary.
+ */
+function findDelimiterPattern(lines: string[]): string | null {
+  const freq = new Map<string, number[]>();
 
-export async function parseDocx(
-  file: File,
-): Promise<{ essays: Essay[]; allLines: string[] }> {
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (!t) continue;
+    const arr = freq.get(t);
+    if (arr) arr.push(i);
+    else freq.set(t, [i]);
+  }
+
+  const MIN_REPEAT = 3;
+  const MAX_CHAR_LEN = 50;
+
+  let best: string | null = null;
+  let bestScore = -1;
+
+  for (const [text, positions] of freq) {
+    if (positions.length < MIN_REPEAT) continue;
+    if (text.length > MAX_CHAR_LEN) continue;
+
+    const gaps: number[] = [];
+    for (let i = 1; i < positions.length; i++) {
+      gaps.push(positions[i] - positions[i - 1]);
+    }
+    const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+    if (mean < 2) continue;
+
+    const variance = gaps.reduce((s, g) => s + (g - mean) ** 2, 0) / gaps.length;
+    const cv = Math.sqrt(variance) / mean;
+
+    // score: more occurrences + more even spacing = better
+    // cv (coefficient of variation) close to 0 means very even
+    const score = positions.length * (1 / (1 + cv));
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = text;
+    }
+  }
+
+  return best;
+}
+
+export async function parseDocx(file: File): Promise<{ essays: Essay[]; allLines: string[] }> {
   const arrayBuffer = await file.arrayBuffer();
   const result = await mammoth.extractRawText({ arrayBuffer });
   const allLines = result.value.split("\n");
 
-  const essays: Essay[] = [];
-  let cur: Partial<Essay> | null = null;
-  let paras: string[] = [];
+  const trimmedLines = allLines.map((l) => l.trim());
 
-  const flush = () => {
-    if (cur?.name) {
-      essays.push({
-        name: cur.name!,
-        className: cur.className!,
-        headerLine: cur.headerLine!,
-        paragraphs: [...paras],
-      });
-    }
-  };
+  const delimiter = findDelimiterPattern(trimmedLines);
 
-  for (const raw of allLines) {
-    const trimmed = raw.trim();
-    const m = trimmed.match(HEADER_RE);
-
-    if (m) {
-      flush();
-      cur = {
-        name: m[1].trim(),
-        className: m[2].replace(/\s+/g, ""),
-        headerLine: trimmed.replace(/\s+/g, " "),
-      };
-      paras = [];
-      continue;
-    }
-
-    if (!cur) continue;
-    if (!trimmed || SEPARATOR_RE.test(trimmed)) continue;
-
-    paras.push(trimmed);
+  if (!delimiter) {
+    // Fallback: treat consecutive non-empty lines as a single essay,
+    // separated by blank-line gaps (2+ consecutive blanks).
+    return { essays: splitByBlankLines(trimmedLines), allLines };
   }
 
-  flush();
+  const essays: Essay[] = [];
+  let paras: string[] = [];
+
+  for (const line of trimmedLines) {
+    if (line === delimiter) {
+      if (paras.length > 0) {
+        essays.push({ delimiter, paragraphs: [...paras] });
+        paras = [];
+      }
+      continue;
+    }
+    if (!line) continue;
+    paras.push(line);
+  }
+
+  // Remaining paragraphs after the last delimiter
+  if (paras.length > 0) {
+    essays.push({ delimiter, paragraphs: [...paras] });
+  }
+
+  // If delimiter appears BEFORE each essay (header style), the first chunk
+  // before the first delimiter may be empty — already handled by paras.length check.
+  // If delimiter appears AFTER each essay, the last chunk is already captured above.
+
   return { essays, allLines };
+}
+
+function splitByBlankLines(lines: string[]): Essay[] {
+  const essays: Essay[] = [];
+  let paras: string[] = [];
+
+  for (const line of lines) {
+    if (!line) {
+      if (paras.length > 0) {
+        essays.push({ delimiter: "", paragraphs: [...paras] });
+        paras = [];
+      }
+      continue;
+    }
+    paras.push(line);
+  }
+
+  if (paras.length > 0) {
+    essays.push({ delimiter: "", paragraphs: [...paras] });
+  }
+
+  return essays;
 }

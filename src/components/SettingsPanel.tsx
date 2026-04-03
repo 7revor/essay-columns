@@ -53,7 +53,6 @@ export default function SettingsPanel({ settings, onChange }: Props) {
         <h3 className="text-sm font-semibold text-gray-800">布局设置</h3>
       </div>
       <div className="space-y-4 p-3">
-        {/* Title */}
         <label className="flex cursor-pointer items-center gap-2">
           <input
             type="checkbox"
@@ -63,6 +62,18 @@ export default function SettingsPanel({ settings, onChange }: Props) {
           />
           <span className="text-xs text-gray-700">
             首段识别为标题（居中加粗）
+          </span>
+        </label>
+
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            checked={settings.stripInfoLines}
+            onChange={(e) => set("stripInfoLines", e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600"
+          />
+          <span className="text-xs text-gray-700">
+            提取个人信息（姓名/班级）
           </span>
         </label>
 
