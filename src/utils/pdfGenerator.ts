@@ -9,11 +9,7 @@ import {
 import { essayInnerHTML } from "./renderUtils";
 import { getColumnWidthMM, getColumnGapMM } from "./layoutEngine";
 
-function buildPageBody(
-  pages: PageLayout[],
-  contents: EssayContent[],
-  settings: LayoutSettings,
-): string {
+function buildPageBody(pages: PageLayout[], contents: EssayContent[], settings: LayoutSettings): string {
   const colW = getColumnWidthMM(settings);
   const gapMM = getColumnGapMM(settings);
 
@@ -50,32 +46,11 @@ font-family:${settings.fontFamily};font-size:${settings.fontSize}pt;line-height:
 .sep{margin-top:${ESSAY_GAP_MM}mm;border-top:.3px dashed #bbb;padding-top:${ESSAY_GAP_MM * 0.4}mm}`;
 }
 
-function buildDesktopHTML(body: string, css: string): string {
+function buildHTML(body: string, css: string): string {
   return `<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <style>${css}</style>
 </head><body>${body}</body></html>`;
-}
-
-function buildMobileHTML(body: string, settings: LayoutSettings): string {
-  return `<!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="utf-8">
-<meta name="viewport" content="width=${A4_WIDTH_MM}mm">
-<style>
-@page{size:${A4_WIDTH_MM}mm ${A4_HEIGHT_MM}mm;margin:0}
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{margin:0;padding:0;width:${A4_WIDTH_MM}mm}
-body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.tip{text-align:center;padding:12px 16px;font-size:14px;color:#555;background:#f0f4ff;font-family:system-ui,sans-serif;width:100%}
-.pg{width:${A4_WIDTH_MM}mm;height:${A4_HEIGHT_MM}mm;position:relative;overflow:hidden;
-font-family:${settings.fontFamily};font-size:${settings.fontSize}pt;line-height:${settings.lineHeight};color:#000}
-.sep{margin-top:${ESSAY_GAP_MM}mm;border-top:.3px dashed #bbb;padding-top:${ESSAY_GAP_MM * 0.4}mm}
-@media print{.tip{display:none}}
-</style>
-</head><body>
-<div class="tip">请使用浏览器的 <b>共享 → 打印</b> 功能导出 PDF，打印时边距请选择「无」</div>
-${body}
-</body></html>`;
 }
 
 const isMobile = () =>
@@ -84,18 +59,24 @@ const isMobile = () =>
 
 function printViaIframe(html: string) {
   const iframe = document.createElement("iframe");
-  iframe.style.cssText =
-    "position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none";
+  iframe.style.cssText = "position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none";
   document.body.appendChild(iframe);
 
   const cleanup = () => {
-    try { document.body.removeChild(iframe); } catch { /* already removed */ }
+    try {
+      document.body.removeChild(iframe);
+    } catch {
+      /* already removed */
+    }
   };
 
   iframe.srcdoc = html;
   iframe.onload = () => {
     const win = iframe.contentWindow;
-    if (!win) { cleanup(); return; }
+    if (!win) {
+      cleanup();
+      return;
+    }
     win.onafterprint = cleanup;
     win.focus();
     win.print();
@@ -110,17 +91,14 @@ function openMobilePage(html: string) {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-export function generatePDF(
-  pages: PageLayout[],
-  contents: EssayContent[],
-  settings: LayoutSettings,
-): void {
+export function generatePDF(pages: PageLayout[], contents: EssayContent[], settings: LayoutSettings): void {
   const body = buildPageBody(pages, contents, settings);
   const css = buildPrintCSS(settings);
+  const html = buildHTML(body, css);
 
   if (isMobile()) {
-    openMobilePage(buildMobileHTML(body, settings));
+    openMobilePage(html);
   } else {
-    printViaIframe(buildDesktopHTML(body, css));
+    printViaIframe(html);
   }
 }
