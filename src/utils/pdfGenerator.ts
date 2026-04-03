@@ -158,12 +158,10 @@ function buildPdfmakeDoc(
 
         for (const p of essay.paragraphs) {
           items.push({
-            text: [
-              { text: "\u3000\u3000" },
-              { text: p },
-            ],
+            text: p,
             fontSize,
             lineHeight: pdfLineHeight,
+            leadingIndent: fontSize * 2,
           });
         }
       }
