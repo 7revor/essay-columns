@@ -124,7 +124,7 @@ export default function FileUpload({ onUpload, compact, fileName }: Props) {
       </div>
 
       <footer className="flex shrink-0 items-center justify-center gap-3 pb-4 pt-2 text-xs text-gray-400">
-        <span>Powered by 7revor</span>
+        <span>Powered by 7revor · {__APP_VERSION__}</span>
         <span className="text-gray-300">|</span>
         <a
           href="https://github.com/7revor/essay-columns"

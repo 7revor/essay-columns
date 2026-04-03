@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "VERSION=$(git describe --tags --always) wrangler deploy --var VERSION:$VERSION"
   },
   "dependencies": {
     "pdfmake": "^0.3.7",
