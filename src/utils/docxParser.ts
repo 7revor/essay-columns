@@ -53,19 +53,17 @@ function findDelimiterPattern(lines: string[]): string | null {
   return best;
 }
 
-export async function parseDocx(file: File): Promise<{ essays: Essay[]; allLines: string[] }> {
+export async function parseDocx(file: File): Promise<Essay[]> {
   const arrayBuffer = await file.arrayBuffer();
   const result = await mammoth.extractRawText({ arrayBuffer });
-  const allLines = result.value.split("\n");
-
-  const trimmedLines = allLines.map((l) => l.trim());
+  const trimmedLines = result.value.split("\n").map((l) => l.trim());
 
   const delimiter = findDelimiterPattern(trimmedLines);
 
   if (!delimiter) {
     // Fallback: treat consecutive non-empty lines as a single essay,
     // separated by blank-line gaps (2+ consecutive blanks).
-    return { essays: splitByBlankLines(trimmedLines), allLines };
+    return splitByBlankLines(trimmedLines);
   }
 
   const essays: Essay[] = [];
@@ -88,11 +86,7 @@ export async function parseDocx(file: File): Promise<{ essays: Essay[]; allLines
     essays.push({ delimiter, paragraphs: [...paras] });
   }
 
-  // If delimiter appears BEFORE each essay (header style), the first chunk
-  // before the first delimiter may be empty — already handled by paras.length check.
-  // If delimiter appears AFTER each essay, the last chunk is already captured above.
-
-  return { essays, allLines };
+  return essays;
 }
 
 function splitByBlankLines(lines: string[]): Essay[] {

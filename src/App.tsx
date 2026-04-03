@@ -31,7 +31,9 @@ export default function App() {
   const measureRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    preloadFont().then(() => setFontLoaded(true));
+    preloadFont()
+      .then(() => setFontLoaded(true))
+      .catch(() => setParseError("字体加载失败，请刷新页面重试"));
   }, []);
 
   const handleUpload = useCallback(async (file: File) => {
@@ -39,14 +41,14 @@ export default function App() {
     setParseError("");
     try {
       setFileName(file.name);
-      const { essays: parsed, allLines } = await parseDocx(file);
+      const parsed = await parseDocx(file);
       if (parsed.length === 0) {
         setParseError("未能识别出任何作文，请检查文档格式");
         setParsing(false);
         return;
       }
       setEssays(parsed);
-      const detected = detectPatterns(parsed, allLines);
+      const detected = detectPatterns(parsed);
       setPatterns(detected);
       setRemovedIds(
         new Set(
@@ -95,15 +97,16 @@ export default function App() {
     setExporting(true);
     try {
       await generatePDF(essayContents, settings, setExportMsg);
+      setExportMsg("");
     } catch (err) {
+      setExporting(false);
       setExportMsg(
         `导出失败: ${err instanceof Error ? err.message : "未知错误"}`,
       );
       setTimeout(() => setExportMsg(""), 3000);
-    } finally {
-      setExporting(false);
-      setExportMsg("");
+      return;
     }
+    setExporting(false);
   }, [essayContents, settings, exporting]);
 
   if (essays.length === 0) {
@@ -228,7 +231,7 @@ export default function App() {
         </main>
       </div>
 
-      {exporting && exportMsg && (
+      {exportMsg && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20">
           <div className="rounded-xl bg-white px-8 py-5 shadow-lg">
             <p className="text-sm text-gray-700">{exportMsg}</p>

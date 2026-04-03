@@ -12,7 +12,8 @@ export default function FileUpload({ onUpload, compact, fileName }: Props) {
 
   const handleFile = useCallback(
     (file: File) => {
-      if (file.name.endsWith(".docx") || file.name.endsWith(".doc")) {
+      const lower = file.name.toLowerCase();
+      if (lower.endsWith(".docx") || lower.endsWith(".doc")) {
         onUpload(file);
       }
     },

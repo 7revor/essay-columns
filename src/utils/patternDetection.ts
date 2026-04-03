@@ -4,7 +4,6 @@ const INFO_LINE_RE = /(?:姓名|班级)[：:]/;
 
 export function detectPatterns(
   essays: Essay[],
-  _allLines: string[],
 ): DetectedPattern[] {
   const patterns: DetectedPattern[] = [];
 
