@@ -9,7 +9,7 @@ import {
 import { essayInnerHTML } from "./renderUtils";
 import { getColumnWidthMM, getColumnGapMM } from "./layoutEngine";
 
-function buildHTML(
+function buildPageBody(
   pages: PageLayout[],
   contents: EssayContent[],
   settings: LayoutSettings,
@@ -32,22 +32,51 @@ function buildHTML(
       }
       cols += `<div style="position:absolute;left:${left}mm;top:${settings.marginTop}mm;width:${colW}mm">${essays}</div>`;
     }
-    const last = pi === pages.length - 1 ? " last" : "";
-    body += `<div class="pg${last}">${cols}</div>`;
+    const first = pi > 0 ? " brk" : "";
+    body += `<div class="pg${first}">${cols}</div>`;
   }
+  return body;
+}
 
-  return `<!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="utf-8"><style>
+function buildPrintCSS(settings: LayoutSettings): string {
+  return `
 @page{size:${A4_WIDTH_MM}mm ${A4_HEIGHT_MM}mm;margin:0}
 html,body{margin:0;padding:0;width:${A4_WIDTH_MM}mm}
-*{box-sizing:border-box}
+*{margin:0;padding:0;box-sizing:border-box}
 body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .pg{width:${A4_WIDTH_MM}mm;height:${A4_HEIGHT_MM}mm;position:relative;overflow:hidden;
-break-after:page;page-break-after:always;
 font-family:${settings.fontFamily};font-size:${settings.fontSize}pt;line-height:${settings.lineHeight};color:#000}
-.pg.last{break-after:auto;page-break-after:auto}
+.pg.brk{break-before:page;page-break-before:always}
+.sep{margin-top:${ESSAY_GAP_MM}mm;border-top:.3px dashed #bbb;padding-top:${ESSAY_GAP_MM * 0.4}mm}`;
+}
+
+function buildDesktopHTML(body: string, css: string): string {
+  return `<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<style>${css}</style>
+</head><body>${body}</body></html>`;
+}
+
+function buildMobileHTML(body: string, settings: LayoutSettings): string {
+  return `<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=${A4_WIDTH_MM}mm">
+<style>
+@page{size:${A4_WIDTH_MM}mm ${A4_HEIGHT_MM}mm;margin:0}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{margin:0;padding:0;width:${A4_WIDTH_MM}mm}
+body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.tip{text-align:center;padding:12px 16px;font-size:14px;color:#555;background:#f0f4ff;font-family:system-ui,sans-serif;width:100%}
+.pg{width:${A4_WIDTH_MM}mm;height:${A4_HEIGHT_MM}mm;position:relative;overflow:hidden;
+font-family:${settings.fontFamily};font-size:${settings.fontSize}pt;line-height:${settings.lineHeight};color:#000}
+.pg.brk{break-before:page;page-break-before:always}
 .sep{margin-top:${ESSAY_GAP_MM}mm;border-top:.3px dashed #bbb;padding-top:${ESSAY_GAP_MM * 0.4}mm}
-</style></head><body>${body}</body></html>`;
+@media print{.tip{display:none}}
+</style>
+</head><body>
+<div class="tip">请使用浏览器的 <b>共享 → 打印</b> 功能导出 PDF，打印时边距请选择「无」</div>
+${body}
+</body></html>`;
 }
 
 const isMobile = () =>
@@ -75,16 +104,11 @@ function printViaIframe(html: string) {
   setTimeout(cleanup, 120_000);
 }
 
-function printViaNewWindow(html: string) {
-  const win = window.open("", "_blank");
-  if (!win) {
-    alert("请允许弹出窗口以导出 PDF");
-    return;
-  }
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-  win.onload = () => { win.focus(); win.print(); };
+function openMobilePage(html: string) {
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 export function generatePDF(
@@ -92,10 +116,12 @@ export function generatePDF(
   contents: EssayContent[],
   settings: LayoutSettings,
 ): void {
-  const html = buildHTML(pages, contents, settings);
+  const body = buildPageBody(pages, contents, settings);
+  const css = buildPrintCSS(settings);
+
   if (isMobile()) {
-    printViaNewWindow(html);
+    openMobilePage(buildMobileHTML(body, settings));
   } else {
-    printViaIframe(html);
+    printViaIframe(buildDesktopHTML(body, css));
   }
 }
