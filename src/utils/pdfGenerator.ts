@@ -69,7 +69,6 @@ body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .tip{text-align:center;padding:12px 16px;font-size:14px;color:#555;background:#f0f4ff;font-family:system-ui,sans-serif;width:100%}
 .pg{width:${A4_WIDTH_MM}mm;height:${A4_HEIGHT_MM}mm;position:relative;overflow:hidden;
 font-family:${settings.fontFamily};font-size:${settings.fontSize}pt;line-height:${settings.lineHeight};color:#000}
-.pg.brk{break-before:page;page-break-before:always}
 .sep{margin-top:${ESSAY_GAP_MM}mm;border-top:.3px dashed #bbb;padding-top:${ESSAY_GAP_MM * 0.4}mm}
 @media print{.tip{display:none}}
 </style>
