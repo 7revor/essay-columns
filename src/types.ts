@@ -56,7 +56,7 @@ export const FONT_LH_RATIO = 1.437;
 
 export const DEFAULT_SETTINGS: LayoutSettings = {
   marginTop: 5,
-  marginBottom: 10,
+  marginBottom: 5,
   marginLeft: 5,
   marginRight: 5,
   columns: 2,

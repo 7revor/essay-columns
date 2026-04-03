@@ -94,7 +94,7 @@ export default function App() {
     if (pages.length === 0 || exporting) return;
     setExporting(true);
     try {
-      await generatePDF(pages, essayContents, settings, setExportMsg);
+      await generatePDF(essayContents, settings, setExportMsg);
     } catch (err) {
       setExportMsg(
         `导出失败: ${err instanceof Error ? err.message : "未知错误"}`,
