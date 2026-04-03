@@ -76,7 +76,7 @@ function buildPdfmakeDoc(
 
     if (essay.title) {
       items.push({
-        text: essay.title,
+        text: `《${essay.title}》`,
         fontSize: fontSize + 0.01,
         characterSpacing: 0.5,
         alignment: "center",

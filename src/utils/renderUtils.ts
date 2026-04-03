@@ -14,7 +14,7 @@ export function essayInnerHTML(content: EssayContent): string {
     html += `<div style="margin:0">${esc(content.header)}</div>`;
   }
   if (content.title) {
-    html += `<div data-essay-title style="margin:0;text-align:center;font-weight:bold">${esc(content.title)}</div>`;
+    html += `<div data-essay-title style="margin:0;text-align:center">《${esc(content.title)}》</div>`;
   }
   for (const p of content.paragraphs) {
     html += `<p style="margin:0;text-indent:2em">${esc(p)}</p>`;
