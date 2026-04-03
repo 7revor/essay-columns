@@ -50,8 +50,8 @@ export const FONT_URL =
   "https://py-sp.oss-cn-beijing.aliyuncs.com/smartDesign/font/思源字体/Source-Han-Serif-SC-Regular.woff";
 export const FONT_FAMILY = '"Source Han Serif SC", serif';
 
-// (ascent - descent) / unitsPerEm for Source Han Serif SC
-// pdfmake lineHeight = cssLineHeight / FONT_LH_RATIO to match CSS rendering
+// pdfmake lineHeight multiplier for Source Han Serif SC
+// derived from (ascender - descender) / unitsPerEm
 export const FONT_LH_RATIO = 1.437;
 
 export const DEFAULT_SETTINGS: LayoutSettings = {

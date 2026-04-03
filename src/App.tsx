@@ -91,7 +91,7 @@ export default function App() {
   const [exportMsg, setExportMsg] = useState("");
 
   const handleExport = useCallback(async () => {
-    if (pages.length === 0 || exporting) return;
+    if (essayContents.length === 0 || exporting) return;
     setExporting(true);
     try {
       await generatePDF(essayContents, settings, setExportMsg);
@@ -104,7 +104,7 @@ export default function App() {
       setExporting(false);
       setExportMsg("");
     }
-  }, [pages, essayContents, settings, exporting]);
+  }, [essayContents, settings, exporting]);
 
   if (essays.length === 0) {
     return (
@@ -156,7 +156,7 @@ export default function App() {
           </button>
           <button
             onClick={handleExport}
-            disabled={pages.length === 0 || exporting}
+            disabled={essayContents.length === 0 || exporting}
             className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {exporting ? "导出中…" : "导出 PDF"}

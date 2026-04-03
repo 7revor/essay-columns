@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import {
   A4_WIDTH_MM,
   A4_HEIGHT_MM,
@@ -42,8 +42,15 @@ export default function Preview({ pages, essayContents, settings }: Props) {
 
   const zoomTo = useCallback((v: number) => setUserZoom(Math.round(Math.max(0.15, Math.min(3, v)) * 100) / 100), []);
 
-  const colW = getColumnWidthMM(settings);
-  const gapMM = getColumnGapMM(settings);
+  const { colW, gapMM } = useMemo(
+    () => ({ colW: getColumnWidthMM(settings), gapMM: getColumnGapMM(settings) }),
+    [settings],
+  );
+
+  const htmlCache = useMemo(
+    () => essayContents.map((c) => essayInnerHTML(c)),
+    [essayContents],
+  );
 
   const pct = Math.round(scale * 100);
 
@@ -139,7 +146,7 @@ export default function Preview({ pages, essayContents, settings }: Props) {
                                 paddingTop: ei > 0 ? `${ESSAY_GAP_MM * 0.4 * MM_TO_PX}px` : undefined,
                               }}
                               dangerouslySetInnerHTML={{
-                                __html: essayInnerHTML(essayContents[idx]),
+                                __html: htmlCache[idx],
                               }}
                             />
                           ))}

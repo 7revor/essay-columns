@@ -25,6 +25,5 @@ export function preloadFont(): Promise<ArrayBuffer> {
 }
 
 export async function getFontBuffer(): Promise<ArrayBuffer> {
-  const buf = await preloadFont();
-  return buf.slice(0);
+  return preloadFont();
 }

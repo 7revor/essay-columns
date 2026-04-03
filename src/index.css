@@ -1,10 +1,5 @@
 @import "tailwindcss";
 
-[data-essay-title] {
-  text-align: center !important;
-  font-weight: bold !important;
-}
-
 * {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;

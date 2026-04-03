@@ -14,6 +14,41 @@ function mmToPt(mm: number): number {
   return mm / PT_TO_MM;
 }
 
+function bufToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  const chunks: string[] = [];
+  for (let i = 0; i < bytes.length; i += 8192) {
+    chunks.push(String.fromCharCode(...bytes.subarray(i, i + 8192)));
+  }
+  return btoa(chunks.join(""));
+}
+
+const FONT_FILE = "SourceHanSerifSC-Regular.woff";
+
+let pdfMakeReady: Promise<any> | null = null;
+
+function getPdfMake(): Promise<any> {
+  if (!pdfMakeReady) {
+    pdfMakeReady = Promise.all([
+      import("pdfmake/build/pdfmake"),
+      getFontBuffer(),
+    ]).then(([mod, fontBuf]) => {
+      const pdfMake = mod.default ?? mod;
+      (pdfMake as any).addVirtualFileSystem({ [FONT_FILE]: bufToBase64(fontBuf) });
+      pdfMake.fonts = {
+        SourceHanSerifSC: {
+          normal: FONT_FILE,
+          bold: FONT_FILE,
+          italics: FONT_FILE,
+          bolditalics: FONT_FILE,
+        },
+      };
+      return pdfMake;
+    });
+  }
+  return pdfMakeReady;
+}
+
 function buildPdfmakeDoc(
   contents: EssayContent[],
   settings: LayoutSettings,
@@ -111,15 +146,6 @@ function buildPdfmakeDoc(
   };
 }
 
-const FONT_FILE = "SourceHanSerifSC-Regular.woff";
-
-function bufToBase64(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
-}
-
 export async function generatePDF(
   contents: EssayContent[],
   settings: LayoutSettings,
@@ -127,21 +153,7 @@ export async function generatePDF(
 ): Promise<void> {
   onProgress?.("正在加载 PDF 引擎…");
 
-  const [pdfMakeModule, fontBuf] = await Promise.all([
-    import("pdfmake/build/pdfmake"),
-    getFontBuffer(),
-  ]);
-  const pdfMake = pdfMakeModule.default ?? pdfMakeModule;
-
-  (pdfMake as any).addVirtualFileSystem({ [FONT_FILE]: bufToBase64(fontBuf) });
-  pdfMake.fonts = {
-    SourceHanSerifSC: {
-      normal: FONT_FILE,
-      bold: FONT_FILE,
-      italics: FONT_FILE,
-      bolditalics: FONT_FILE,
-    },
-  };
+  const pdfMake = await getPdfMake();
 
   onProgress?.("正在生成 PDF…");
 
