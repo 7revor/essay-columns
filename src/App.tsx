@@ -44,7 +44,7 @@ export default function App() {
       setRemovedIds(
         new Set(
           detected
-            .filter((p) => p.type !== "header" && p.count >= parsed.length)
+            .filter((p) => p.type !== "header" && p.count >= parsed.length - 2)
             .map((p) => p.id),
         ),
       );
