@@ -1,4 +1,4 @@
-import { FONT_OPTIONS, type LayoutSettings } from "../types";
+import type { LayoutSettings } from "../types";
 
 interface Props {
   settings: LayoutSettings;
@@ -125,45 +125,29 @@ export default function SettingsPanel({ settings, onChange }: Props) {
           </div>
         </fieldset>
 
-        {/* Font */}
+        {/* Font size & line height */}
         <fieldset>
           <legend className="mb-1.5 text-xs font-medium text-gray-700">
             字体
           </legend>
-          <div className="space-y-2">
-            <div>
-              <div className="mb-0.5 text-[11px] text-gray-500">字体族</div>
-              <select
-                value={settings.fontFamily}
-                onChange={(e) => set("fontFamily", e.target.value)}
-                className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:border-blue-400 focus:outline-none"
-              >
-                {FONT_OPTIONS.map((f) => (
-                  <option key={f.value} value={f.value}>
-                    {f.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Field
-                label="字号"
-                value={settings.fontSize}
-                onChange={(v) => set("fontSize", Math.max(3, v))}
-                min={3}
-                max={30}
-                step={0.5}
-                unit="pt"
-              />
-              <Field
-                label="行高"
-                value={settings.lineHeight}
-                onChange={(v) => set("lineHeight", Math.max(1, v))}
-                min={1}
-                max={3}
-                step={0.1}
-              />
-            </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Field
+              label="字号"
+              value={settings.fontSize}
+              onChange={(v) => set("fontSize", Math.max(3, v))}
+              min={3}
+              max={30}
+              step={0.5}
+              unit="pt"
+            />
+            <Field
+              label="行高"
+              value={settings.lineHeight}
+              onChange={(v) => set("lineHeight", Math.max(1, v))}
+              min={1}
+              max={3}
+              step={0.1}
+            />
           </div>
         </fieldset>
       </div>

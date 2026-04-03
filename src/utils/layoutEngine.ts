@@ -4,6 +4,7 @@ import {
   MM_TO_PX,
   PT_TO_MM,
   ESSAY_GAP_MM,
+  FONT_FAMILY,
   type LayoutSettings,
   type PageLayout,
   type EssayContent,
@@ -32,7 +33,7 @@ export function measureEssayHeights(
   const w = getColumnWidthMM(settings) * MM_TO_PX;
   Object.assign(container.style, {
     width: `${w}px`,
-    fontFamily: settings.fontFamily,
+    fontFamily: FONT_FAMILY,
     fontSize: `${settings.fontSize}pt`,
     lineHeight: `${settings.lineHeight}`,
     position: "absolute",

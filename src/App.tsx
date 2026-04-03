@@ -11,12 +11,14 @@ import { parseDocx } from "./utils/docxParser";
 import { detectPatterns, filterEssay } from "./utils/patternDetection";
 import { measureEssayHeights, computeLayout } from "./utils/layoutEngine";
 import { generatePDF } from "./utils/pdfGenerator";
+import { preloadFont } from "./utils/fontLoader";
 import FileUpload from "./components/FileUpload";
 import PatternPanel from "./components/PatternPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import Preview from "./components/Preview";
 
 export default function App() {
+  const [fontLoaded, setFontLoaded] = useState(false);
   const [fileName, setFileName] = useState("");
   const [essays, setEssays] = useState<Essay[]>([]);
   const [patterns, setPatterns] = useState<DetectedPattern[]>([]);
@@ -27,6 +29,10 @@ export default function App() {
   const [parseError, setParseError] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const measureRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    preloadFont().then(() => setFontLoaded(true));
+  }, []);
 
   const handleUpload = useCallback(async (file: File) => {
     setParsing(true);
@@ -69,7 +75,7 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (!measureRef.current || essayContents.length === 0) {
+    if (!fontLoaded || !measureRef.current || essayContents.length === 0) {
       setPages([]);
       return;
     }
@@ -79,17 +85,36 @@ export default function App() {
       measureRef.current,
     );
     setPages(computeLayout(heights, settings));
-  }, [essayContents, settings]);
+  }, [fontLoaded, essayContents, settings]);
 
-  const handleExport = useCallback(() => {
-    if (pages.length === 0) return;
-    generatePDF(pages, essayContents, settings);
-  }, [pages, essayContents, settings]);
+  const [exporting, setExporting] = useState(false);
+  const [exportMsg, setExportMsg] = useState("");
+
+  const handleExport = useCallback(async () => {
+    if (pages.length === 0 || exporting) return;
+    setExporting(true);
+    try {
+      await generatePDF(pages, essayContents, settings, setExportMsg);
+    } catch (err) {
+      setExportMsg(
+        `导出失败: ${err instanceof Error ? err.message : "未知错误"}`,
+      );
+      setTimeout(() => setExportMsg(""), 3000);
+    } finally {
+      setExporting(false);
+      setExportMsg("");
+    }
+  }, [pages, essayContents, settings, exporting]);
 
   if (essays.length === 0) {
     return (
       <div>
         <FileUpload onUpload={handleUpload} />
+        {!fontLoaded && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-lg bg-gray-800 px-5 py-3 text-sm text-white shadow-lg">
+            正在加载字体…
+          </div>
+        )}
         {parsing && (
           <div className="fixed inset-0 flex items-center justify-center bg-black/20">
             <div className="rounded-xl bg-white px-8 py-5 shadow-lg">
@@ -131,10 +156,10 @@ export default function App() {
           </button>
           <button
             onClick={handleExport}
-            disabled={pages.length === 0}
+            disabled={pages.length === 0 || exporting}
             className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            导出 PDF
+            {exporting ? "导出中…" : "导出 PDF"}
           </button>
         </div>
       </header>
@@ -202,6 +227,14 @@ export default function App() {
           />
         </main>
       </div>
+
+      {exporting && exportMsg && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20">
+          <div className="rounded-xl bg-white px-8 py-5 shadow-lg">
+            <p className="text-sm text-gray-700">{exportMsg}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

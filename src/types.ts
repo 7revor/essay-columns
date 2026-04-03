@@ -26,7 +26,6 @@ export interface LayoutSettings {
   marginRight: number;
   columns: number;
   columnGapChars: number;
-  fontFamily: string;
   fontSize: number;
   lineHeight: number;
   titleAsFirstParagraph: boolean;
@@ -47,6 +46,14 @@ export const MM_TO_PX = 96 / 25.4;
 export const PT_TO_MM = 25.4 / 72;
 export const ESSAY_GAP_MM = 2;
 
+export const FONT_URL =
+  "https://py-sp.oss-cn-beijing.aliyuncs.com/smartDesign/font/思源字体/Source-Han-Serif-SC-Regular.woff";
+export const FONT_FAMILY = '"Source Han Serif SC", serif';
+
+// (ascent - descent) / unitsPerEm for Source Han Serif SC
+// pdfmake lineHeight = cssLineHeight / FONT_LH_RATIO to match CSS rendering
+export const FONT_LH_RATIO = 1.437;
+
 export const DEFAULT_SETTINGS: LayoutSettings = {
   marginTop: 5,
   marginBottom: 10,
@@ -54,19 +61,7 @@ export const DEFAULT_SETTINGS: LayoutSettings = {
   marginRight: 5,
   columns: 2,
   columnGapChars: 1,
-  fontFamily: '"SimSun", "STSong", "Songti SC", serif',
   fontSize: 8,
   lineHeight: 1.2,
   titleAsFirstParagraph: true,
 };
-
-export const FONT_OPTIONS = [
-  { label: "宋体", value: '"SimSun", "STSong", "Songti SC", serif' },
-  { label: "黑体", value: '"SimHei", "STHeiti", "Heiti SC", sans-serif' },
-  { label: "楷体", value: '"KaiTi", "STKaiti", "Kaiti SC", serif' },
-  { label: "仿宋", value: '"FangSong", "STFangsong", serif' },
-  {
-    label: "苹方/雅黑",
-    value: '"PingFang SC", "Microsoft YaHei", sans-serif',
-  },
-];
