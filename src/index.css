@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+[data-essay-title] {
+  text-align: center !important;
+  font-weight: bold !important;
+}
