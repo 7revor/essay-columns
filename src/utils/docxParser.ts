@@ -98,15 +98,19 @@ export async function parseDocx(file: File): Promise<{ essays: Essay[]; allLines
 function splitByBlankLines(lines: string[]): Essay[] {
   const essays: Essay[] = [];
   let paras: string[] = [];
+  let blankCount = 0;
 
   for (const line of lines) {
     if (!line) {
-      if (paras.length > 0) {
+      blankCount++;
+      // Split only on 2+ consecutive blank lines
+      if (blankCount >= 2 && paras.length > 0) {
         essays.push({ delimiter: "", paragraphs: [...paras] });
         paras = [];
       }
       continue;
     }
+    blankCount = 0;
     paras.push(line);
   }
 

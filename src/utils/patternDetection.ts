@@ -84,7 +84,7 @@ export function filterEssay(
   }
 
   if (!removedIds.has("delimiter") && essay.delimiter) {
-    header = essay.delimiter;
+    header = header ? `${essay.delimiter}  ${header}` : essay.delimiter;
   }
 
   return {
