@@ -132,7 +132,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-gray-50">
+    <div className="flex flex-col bg-gray-50" style={{ height: "100dvh" }}>
       {/* Hidden measurement container */}
       <div
         ref={measureRef}

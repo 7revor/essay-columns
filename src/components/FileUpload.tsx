@@ -65,9 +65,9 @@ export default function FileUpload({ onUpload, compact, fileName }: Props) {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      <div className="flex flex-1 flex-col items-center justify-center px-4 py-12 sm:px-8">
-        <div className="mb-8 text-center sm:mb-10">
+    <div className="flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50" style={{ height: "100dvh" }}>
+      <div className="flex flex-1 flex-col items-center justify-center overflow-hidden px-4 sm:px-8">
+        <div className="mb-6 text-center sm:mb-10">
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
             {"\u4F5C\u6587\u5206\u680F\u5DE5\u5177"}
           </h1>
@@ -109,9 +109,9 @@ export default function FileUpload({ onUpload, compact, fileName }: Props) {
           />
         </div>
 
-        <div className="mt-10 grid w-full max-w-lg grid-cols-3 gap-3 sm:mt-12 sm:gap-5">
+        <div className="mt-6 grid w-full max-w-lg grid-cols-3 gap-3 sm:mt-10 sm:gap-5">
           {features.map((f) => (
-            <div key={f.title} className="flex flex-col items-center rounded-xl bg-white/70 px-3 py-4 shadow-sm backdrop-blur sm:px-4 sm:py-5">
+            <div key={f.title} className="flex flex-col items-center rounded-xl bg-white/70 px-3 py-3 shadow-sm backdrop-blur sm:px-4 sm:py-5">
               <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-500 sm:h-10 sm:w-10">
                 <f.icon />
               </div>
@@ -122,7 +122,7 @@ export default function FileUpload({ onUpload, compact, fileName }: Props) {
         </div>
       </div>
 
-      <footer className="flex items-center justify-center gap-3 pb-6 text-xs text-gray-400">
+      <footer className="flex shrink-0 items-center justify-center gap-3 pb-4 pt-2 text-xs text-gray-400">
         <span>Powered by 7revor</span>
         <span className="text-gray-300">|</span>
         <a
