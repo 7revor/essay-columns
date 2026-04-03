@@ -59,7 +59,7 @@ export default function FileUpload({ onUpload, compact, fileName }: Props) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-8">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4 sm:p-8">
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -68,7 +68,7 @@ export default function FileUpload({ onUpload, compact, fileName }: Props) {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         onClick={() => inputRef.current?.click()}
-        className={`flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-2xl border-2 border-dashed p-16 transition-colors ${
+        className={`flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-2xl border-2 border-dashed p-8 sm:p-16 transition-colors ${
           dragging
             ? "border-blue-500 bg-blue-50"
             : "border-gray-300 bg-white hover:border-blue-400 hover:bg-gray-50"
@@ -88,10 +88,10 @@ export default function FileUpload({ onUpload, compact, fileName }: Props) {
           />
         </svg>
         <div className="text-center">
-          <p className="text-lg font-medium text-gray-700">
+          <p className="text-base font-medium text-gray-700 sm:text-lg">
             拖拽 .docx 文件到此处
           </p>
-          <p className="mt-1 text-sm text-gray-500">或点击选择文件</p>
+          <p className="mt-1 text-xs text-gray-500 sm:text-sm">或点击选择文件</p>
         </div>
         <input
           ref={inputRef}

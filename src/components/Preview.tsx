@@ -54,11 +54,14 @@ export default function Preview({ pages, essayContents, settings }: Props) {
   return (
     <div className="flex h-full flex-col">
       {hasContent && (
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white/90 px-4 py-1.5 backdrop-blur">
-          <span className="text-xs text-gray-500">
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white/90 px-2 py-1.5 backdrop-blur sm:px-4">
+          <span className="hidden text-xs text-gray-500 sm:inline">
             共 {pages.length} 页 · {essayContents.length} 篇作文
           </span>
-          <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-gray-500 sm:hidden">
+            {pages.length}页 · {essayContents.length}篇
+          </span>
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <button
               onClick={() => zoomTo(scale - 0.1)}
               className="flex h-6 w-6 items-center justify-center rounded text-sm text-gray-600 hover:bg-gray-100"
@@ -72,7 +75,7 @@ export default function Preview({ pages, essayContents, settings }: Props) {
               step={5}
               value={pct}
               onChange={(e) => zoomTo(Number(e.target.value) / 100)}
-              className="h-1 w-28 cursor-pointer accent-blue-600"
+              className="h-1 w-16 cursor-pointer accent-blue-600 sm:w-28"
             />
             <button
               onClick={() => zoomTo(scale + 0.1)}
@@ -102,7 +105,7 @@ export default function Preview({ pages, essayContents, settings }: Props) {
             暂无内容
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-5 p-5">
+          <div className="flex flex-col items-center gap-3 p-3 sm:gap-5 sm:p-5">
             {pages.map((page, pi) => (
               <div key={pi} className="shrink-0">
                 <div
