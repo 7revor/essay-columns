@@ -46,3 +46,4 @@ Thumbs.db
 .parcel-cache/
 .eslintcache
 .stylelintcache
+.claude
