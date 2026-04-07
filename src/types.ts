@@ -45,8 +45,10 @@ export const MM_TO_PX = 96 / 25.4;
 export const PT_TO_MM = 25.4 / 72;
 export const ESSAY_GAP_MM = 2;
 
-export const FONT_URL =
+export const FONT_URL_PRIMARY = "/fonts/SourceHanSerifSC-Regular.woff";
+export const FONT_URL_FALLBACK =
   "https://py-sp.oss-cn-beijing.aliyuncs.com/smartDesign/font/思源字体/Source-Han-Serif-SC-Regular.woff";
+export const FONT_LOAD_TIMEOUT_MS = 10_000;
 export const FONT_FAMILY = '"Source Han Serif SC", serif';
 
 // pdfmake lineHeight multiplier for Source Han Serif SC
