@@ -1,8 +1,9 @@
-import { FONT_URL } from "../types";
+import { FONT_URL_LOCAL, FONT_URL_OSS, FONT_CACHE_KEY } from "../types";
 
 const DB_NAME = "essay-columns-fonts";
 const DB_VERSION = 1;
 const STORE_NAME = "fonts";
+const LOCAL_TIMEOUT_MS = 10_000;
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -44,15 +45,39 @@ async function saveToCache(key: string, buf: ArrayBuffer): Promise<void> {
   }
 }
 
+function fetchWithTimeout(url: string, timeoutMs: number): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`Font fetch timed out after ${timeoutMs}ms: ${url}`));
+    }, timeoutMs);
+
+    fetch(url, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Font download failed: ${res.status}`);
+        return res.arrayBuffer();
+      })
+      .then((buf) => { clearTimeout(timer); resolve(buf); })
+      .catch((err) => { clearTimeout(timer); reject(err); });
+  });
+}
+
 async function loadFont(): Promise<ArrayBuffer> {
-  const cached = await getFromCache(FONT_URL);
+  const cached = await getFromCache(FONT_CACHE_KEY);
   if (cached) return cached;
 
-  const res = await fetch(FONT_URL);
-  if (!res.ok) throw new Error(`Font download failed: ${res.status}`);
-  const buf = await res.arrayBuffer();
+  let buf: ArrayBuffer;
+  try {
+    buf = await fetchWithTimeout(FONT_URL_LOCAL, LOCAL_TIMEOUT_MS);
+  } catch {
+    // Local server timed out or failed — fallback to OSS
+    const res = await fetch(FONT_URL_OSS);
+    if (!res.ok) throw new Error(`Font download failed: ${res.status}`);
+    buf = await res.arrayBuffer();
+  }
 
-  saveToCache(FONT_URL, buf.slice(0)); // fire-and-forget
+  saveToCache(FONT_CACHE_KEY, buf.slice(0)); // fire-and-forget
   return buf;
 }
 
