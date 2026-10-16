@@ -106,10 +106,17 @@ export function parseTextEssays(lines: string[]): Essay[] {
 }
 
 function splitByInfoLines(lines: string[]): Essay[] | null {
-  const boundaryCount = lines.filter((line) =>
-    isEssayBoundaryInfoLine(line.trim()),
-  ).length;
-  if (boundaryCount < 2) return null;
+  const boundaryIndexes = lines
+    .map((line, index) =>
+      isEssayBoundaryInfoLine(line.trim()) ? index : -1,
+    )
+    .filter((index) => index >= 0);
+  if (boundaryIndexes.length < 2) return null;
+
+  const titleIndexes = detectTitlesBeforeInfoLines(lines, boundaryIndexes);
+  if (titleIndexes) {
+    return splitByTitlesBeforeInfoLines(lines, boundaryIndexes, titleIndexes);
+  }
 
   const essays: Essay[] = [];
   let sourceHeader: string | undefined;
@@ -131,6 +138,71 @@ function splitByInfoLines(lines: string[]): Essay[] | null {
     if (sourceHeader && line) paragraphs.push(line);
   }
   flush();
+
+  return essays.length >= 2 ? essays : null;
+}
+
+function detectTitlesBeforeInfoLines(
+  lines: string[],
+  boundaryIndexes: number[],
+): number[] | null {
+  const titleIndexes = boundaryIndexes.map((boundaryIndex) => {
+    for (let index = boundaryIndex - 1; index >= 0; index--) {
+      if (lines[index].trim()) return index;
+    }
+    return -1;
+  });
+
+  // A title-before-info document starts with a title before the very first
+  // personal-information line. Requiring the same short-title shape for most
+  // boundaries prevents short body paragraphs in info-first documents from
+  // being pulled into the following essay.
+  if (titleIndexes[0] < 0) return null;
+
+  const titleLikeCount = titleIndexes.filter((index) => {
+    if (index < 0) return false;
+    const text = lines[index].trim();
+    return (
+      text.length > 0 &&
+      text.length <= 50 &&
+      !isEssayBoundaryInfoLine(text) &&
+      !/[。！？!?；;]$/u.test(text)
+    );
+  }).length;
+
+  return titleLikeCount >= Math.ceil(boundaryIndexes.length * 0.8)
+    ? titleIndexes
+    : null;
+}
+
+function splitByTitlesBeforeInfoLines(
+  lines: string[],
+  boundaryIndexes: number[],
+  titleIndexes: number[],
+): Essay[] | null {
+  const essays: Essay[] = [];
+
+  for (let essayIndex = 0; essayIndex < boundaryIndexes.length; essayIndex++) {
+    const titleIndex = titleIndexes[essayIndex];
+    const boundaryIndex = boundaryIndexes[essayIndex];
+    const nextTitleIndex = titleIndexes[essayIndex + 1] ?? lines.length;
+    if (titleIndex < 0 || titleIndex >= boundaryIndex) continue;
+
+    const paragraphs = [
+      lines[titleIndex].trim(),
+      ...lines
+        .slice(boundaryIndex + 1, nextTitleIndex)
+        .map((line) => line.trim())
+        .filter(Boolean),
+    ];
+    if (paragraphs.length < 2) continue;
+
+    essays.push({
+      delimiter: "",
+      sourceHeader: lines[boundaryIndex].trim(),
+      paragraphs,
+    });
+  }
 
   return essays.length >= 2 ? essays : null;
 }

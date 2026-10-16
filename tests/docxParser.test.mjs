@@ -140,6 +140,48 @@ test("无可用 section 时可用不同姓名的个人信息行分篇", () => {
   assert.deepEqual(essays[1].paragraphs, ["题目二", "正文二"]);
 });
 
+test("单节合并文档可识别标题在个人信息行之前的篇章", () => {
+  const essays = parseTextEssays([
+    "纸鱼",
+    "姓名：张三  班级：二年级一班",
+    "正文一。",
+    "",
+    "升降国旗",
+    "姓名：李四  班级：二年级一班",
+    "正文二。",
+    "",
+    "会跳舞的小红花",
+    "姓名：   班级：二年级一班",
+    "正文三。",
+  ]);
+
+  assert.equal(essays.length, 3);
+  assert.equal(essays[0].sourceHeader, "姓名：张三  班级：二年级一班");
+  assert.deepEqual(essays[0].paragraphs, ["纸鱼", "正文一。"]);
+  assert.deepEqual(essays[1].paragraphs, ["升降国旗", "正文二。"]);
+  assert.equal(essays[2].sourceHeader, "姓名：   班级：二年级一班");
+  assert.deepEqual(essays[2].paragraphs, ["会跳舞的小红花", "正文三。"]);
+});
+
+test("姓名在前且正文很短时不会误把正文归给下一篇", () => {
+  const essays = parseTextEssays([
+    "姓名：张三  班级：四年级1班",
+    "题目一",
+    "正文一",
+    "姓名：李四  班级：四年级1班",
+    "题目二",
+    "正文二",
+    "姓名：王五  班级：四年级1班",
+    "题目三",
+    "正文三",
+  ]);
+
+  assert.equal(essays.length, 3);
+  assert.deepEqual(essays[0].paragraphs, ["题目一", "正文一"]);
+  assert.deepEqual(essays[1].paragraphs, ["题目二", "正文二"]);
+  assert.deepEqual(essays[2].paragraphs, ["题目三", "正文三"]);
+});
+
 test("普通版式分节不会在缺少作文特征时被误判为多篇", async () => {
   const zip = new JSZip();
   zip.file(
