@@ -1,6 +1,7 @@
 export interface Essay {
   delimiter: string;
   paragraphs: string[];
+  sourceHeader?: string;
 }
 
 export interface EssayContent {

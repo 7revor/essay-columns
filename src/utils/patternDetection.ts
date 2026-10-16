@@ -1,6 +1,5 @@
 import type { Essay, EssayContent, DetectedPattern } from "../types";
-
-const INFO_LINE_RE = /(?:姓名|班级)[：:]/;
+import { isInfoLine } from "./textPatterns.ts";
 
 export function detectPatterns(
   essays: Essay[],
@@ -64,20 +63,22 @@ export function filterEssay(
     (p) => !decorativeTexts.has(p.trim()),
   );
 
-  let header: string | undefined;
+  let header = essay.sourceHeader?.trim() || undefined;
 
   if (stripInfoLines) {
     const infoLines: string[] = [];
     const rest: string[] = [];
     for (const line of filtered) {
-      if (INFO_LINE_RE.test(line) && rest.length === 0) {
+      if (isInfoLine(line) && rest.length === 0) {
         infoLines.push(line);
       } else {
         rest.push(line);
       }
     }
     if (infoLines.length > 0) {
-      header = infoLines.join("  ");
+      const inlineHeader = infoLines.join("  ");
+      if (!header) header = inlineHeader;
+      else if (header !== inlineHeader) header = `${header}  ${inlineHeader}`;
       filtered = rest;
     }
   }
