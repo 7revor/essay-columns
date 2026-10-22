@@ -16,8 +16,8 @@ export interface DocxBlock {
   blankBefore: number;
   /** 前面有分页：分页符、段前分页，或换页分节的起点。 */
   pageBreakBefore: boolean;
-  /** 使用标题样式或带大纲级别。 */
-  heading: boolean;
+  /** 标题样式或大纲级别（0 为最高级）；正文为 undefined。 */
+  headingLevel?: number;
   centered: boolean;
   /** 所有可见文字均为粗体。 */
   bold: boolean;
@@ -45,7 +45,7 @@ interface StyleProperties {
   pageBreakBefore?: boolean;
   bold?: boolean;
   fontSize?: number;
-  heading?: boolean;
+  headingLevel?: number;
 }
 
 interface Styles {
@@ -152,9 +152,10 @@ async function readStyles(zip: JSZip): Promise<Styles> {
       readParagraphProperties(directChild(style, "pPr")),
       readRunProperties(directChild(style, "rPr")),
     );
-    if (/^(heading\s*\d|title|标题)/i.test(name) || /^(Heading\d|Title)$/.test(id)) {
-      own.heading = true;
-    }
+    const headingName = (/^(?:heading|标题)\s*(\d)$/i.exec(name) ||
+      /^Heading(\d)$/.exec(id))?.[1];
+    if (headingName) own.headingLevel = Number(headingName) - 1;
+    else if (/^(?:title|标题)$/i.test(name) || id === "Title") own.headingLevel = 0;
     raw.set(id, {
       basedOn: wordAttribute(directChild(style, "basedOn"), "val") || undefined,
       own,
@@ -299,7 +300,7 @@ class BlockReader {
     if (properties.pageBreakBefore) this.pendingPageBreak = true;
 
     const format = {
-      heading: Boolean(properties.heading || properties.outlineLevel !== undefined),
+      headingLevel: properties.outlineLevel ?? properties.headingLevel,
       centered: Boolean(properties.centered),
     };
     let text = "";
@@ -433,7 +434,6 @@ class BlockReader {
       );
       this.pushBlock({
         text: tableCells.join("\t"),
-        heading: false,
         centered: false,
         bold: filled.every((reader) => reader.blocks.every((block) => block.bold)),
         tableCells,

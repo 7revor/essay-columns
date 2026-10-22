@@ -125,6 +125,8 @@ const HEADING_STYLES =
   `<w:styles xmlns:w="${WORD_NS}">` +
   `<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/>` +
   `<w:pPr><w:outlineLvl w:val="0"/></w:pPr></w:style>` +
+  `<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/>` +
+  `<w:basedOn w:val="Heading1"/><w:pPr><w:outlineLvl w:val="1"/></w:pPr></w:style>` +
   `</w:styles>`;
 
 async function makeDocx({ body, headers = {}, styles } = {}) {
@@ -159,7 +161,7 @@ const info = (i) => `姓名：学生${i}  班级：三年级3班`;
 
 // ---------- 结构层：分页、控件、文本框、表格、样式 ----------
 
-test("仅用分页符分隔的作文按分页切分", TODO, async () => {
+test("仅用分页符分隔的作文按分页切分", async () => {
   const body = ids
     .map(
       (i) =>
@@ -175,7 +177,7 @@ test("仅用分页符分隔的作文按分页切分", TODO, async () => {
   );
 });
 
-test("段落属性『段前分页』也视为分篇信号", TODO, async () => {
+test("段落属性『段前分页』也视为分篇信号", async () => {
   const body = ids
     .map(
       (i) =>
@@ -244,7 +246,7 @@ test("文本框的 Choice/Fallback 双份内容只读取一次", async () => {
   );
 });
 
-test("单元格作文纸中的段落保持独立，嵌套表格不重复", TODO, async () => {
+test("单元格作文纸中的段落保持独立，嵌套表格不重复", async () => {
   const body = [1, 2]
     .map(
       (i) =>
@@ -264,7 +266,7 @@ test("单元格作文纸中的段落保持独立，嵌套表格不重复", TODO,
   );
 });
 
-test("表格形式的个人信息栏可识别并规整为页头", TODO, async () => {
+test("表格形式的个人信息栏可识别并规整为页头", async () => {
   const body = ids
     .map(
       (i) =>
@@ -279,7 +281,7 @@ test("表格形式的个人信息栏可识别并规整为页头", TODO, async ()
   );
 });
 
-test("标题样式的段落可作为分篇信号", TODO, async () => {
+test("标题样式的段落可作为分篇信号", async () => {
   const body = ids
     .map(
       (i) =>
@@ -291,6 +293,19 @@ test("标题样式的段落可作为分篇信号", TODO, async () => {
   assert.deepEqual(
     await renderDocx(await makeDocx({ body, styles: HEADING_STYLES })),
     ids.map((i) => expected("", `题目${i}`, `正文${i}第一段。`, `正文${i}第二段。`)),
+  );
+});
+
+test("单篇作文中的二级标题不会被拆成多篇", async () => {
+  const body =
+    P("我的四季", { style: "Heading1" }) +
+    P("春天", { style: "Heading2" }) +
+    P("春天来了。") +
+    P("夏天", { style: "Heading2" }) +
+    P("夏天很热。");
+  assert.deepEqual(
+    await renderDocx(await makeDocx({ body, styles: HEADING_STYLES })),
+    [expected("", "我的四季", "春天", "春天来了。", "夏天", "夏天很热。")],
   );
 });
 
@@ -361,7 +376,7 @@ test("个人信息行：已支持的同行『姓名 + 班级』", () => {
   );
 });
 
-test("个人信息行：键名中间有空格『姓 名：』", TODO, () => {
+test("个人信息行：键名中间有空格『姓 名：』", () => {
   const line = (i) => `姓 名：学生${i}  班 级：三年级3班`;
   assert.deepEqual(
     render(parseTextEssays(repeat((i) => [line(i), `题目${i}`, `正文${i}。`]))),
@@ -369,7 +384,7 @@ test("个人信息行：键名中间有空格『姓 名：』", TODO, () => {
   );
 });
 
-test("个人信息行：姓名和班级分两行", TODO, () => {
+test("个人信息行：姓名和班级分两行", () => {
   assert.deepEqual(
     render(
       parseTextEssays(
@@ -380,7 +395,7 @@ test("个人信息行：姓名和班级分两行", TODO, () => {
   );
 });
 
-test("个人信息行：题目在前且信息分两行", TODO, () => {
+test("个人信息行：题目在前且信息分两行", () => {
   assert.deepEqual(
     render(
       parseTextEssays(
@@ -391,14 +406,14 @@ test("个人信息行：题目在前且信息分两行", TODO, () => {
   );
 });
 
-test("个人信息行：只有『作者：』", TODO, () => {
+test("个人信息行：只有『作者：』", () => {
   assert.deepEqual(
     render(parseTextEssays(repeat((i) => [`题目${i}`, `作者：学生${i}`, `正文${i}。`]))),
     ids.map((i) => expected(`作者：学生${i}`, `题目${i}`, `正文${i}。`)),
   );
 });
 
-test("个人信息行：无冒号的『三年级3班 张三』", TODO, () => {
+test("个人信息行：无冒号的『三年级3班 张三』", () => {
   assert.deepEqual(
     render(
       parseTextEssays(repeat((i) => [`题目${i}`, `三年级3班 学生${i}`, `正文${i}。`])),
@@ -407,7 +422,7 @@ test("个人信息行：无冒号的『三年级3班 张三』", TODO, () => {
   );
 });
 
-test("个人信息行：『学生：』搭配『学校：』", TODO, () => {
+test("个人信息行：『学生：』搭配『学校：』", () => {
   const line = (i) => `学生：学生${i}  学校：实验小学`;
   assert.deepEqual(
     render(parseTextEssays(repeat((i) => [line(i), `题目${i}`, `正文${i}。`]))),
@@ -415,14 +430,14 @@ test("个人信息行：『学生：』搭配『学校：』", TODO, () => {
   );
 });
 
-test("个人信息行：文末署名", TODO, () => {
+test("个人信息行：文末署名", () => {
   assert.deepEqual(
     render(parseTextEssays(repeat((i) => [`题目${i}`, `正文${i}。`, `作者：学生${i}`]))),
     ids.map((i) => expected(`作者：学生${i}`, `题目${i}`, `正文${i}。`)),
   );
 });
 
-test("封面行 + 信息在前 + 文末指导老师：不把结尾挪到下一篇", TODO, () => {
+test("封面行 + 信息在前 + 文末指导老师：不把结尾挪到下一篇", () => {
   assert.deepEqual(
     render(
       parseTextEssays([
@@ -464,6 +479,32 @@ test("『第N篇』编号分隔", TODO, () => {
   assert.deepEqual(
     render(parseTextEssays(repeat((i) => [`第${i}篇`, `题目${i}`, `正文${i}。`]))),
     ids.map((i) => expected("", `题目${i}`, `正文${i}。`)),
+  );
+});
+
+test("单篇作文中的『一、』小标题不会被拆成多篇", () => {
+  const lines = ["我的寒假", "一、学做饭", "我学会了炒鸡蛋。", "二、去滑雪", "滑雪真好玩。"];
+  assert.deepEqual(render(parseTextEssays(lines)), [
+    expected("", ...lines),
+  ]);
+});
+
+test("对话中的『老师：“……”』不当作个人信息", () => {
+  const lines = ["开学第一天", "老师：“同学们好！”", "我们齐声回答：“老师好！”"];
+  assert.deepEqual(render(parseTextEssays(lines)), [expected("", ...lines)]);
+});
+
+test("以『一、』编号开头的作文集按编号分篇", () => {
+  assert.deepEqual(
+    render(
+      parseTextEssays(
+        ["一、春游", "春游真开心。", "二、秋游", "秋游也开心。"],
+      ),
+    ),
+    [
+      expected("", "一、春游", "春游真开心。"),
+      expected("", "二、秋游", "秋游也开心。"),
+    ],
   );
 });
 
