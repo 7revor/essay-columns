@@ -38,6 +38,12 @@ export default function Preview({ pages, essayContents, settings }: Props) {
 
   useEffect(() => {
     calcFitScale();
+    const el = scrollRef.current;
+    if (!el) return;
+    // 窗口尺寸变化（如手机旋转、侧栏切换）时重新计算适应宽度
+    const ro = new ResizeObserver(calcFitScale);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, [hasContent, calcFitScale]);
 
   const zoomTo = useCallback((v: number) => setUserZoom(Math.round(Math.max(0.15, Math.min(3, v)) * 100) / 100), []);
