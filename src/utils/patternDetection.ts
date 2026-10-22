@@ -46,6 +46,17 @@ export function detectPatterns(
   return patterns;
 }
 
+export function defaultRemovedIds(
+  patterns: DetectedPattern[],
+  essayCount: number,
+): Set<string> {
+  return new Set(
+    patterns
+      .filter((p) => p.type === "header" || p.count >= essayCount - 2)
+      .map((p) => p.id),
+  );
+}
+
 export function filterEssay(
   essay: Essay,
   removedIds: Set<string>,
