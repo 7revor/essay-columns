@@ -1,4 +1,13 @@
 import { useRef, useState, useCallback } from "react";
+import {
+  ColumnsIcon,
+  DocumentIcon,
+  GitHubIcon,
+  LogoMark,
+  PdfIcon,
+  SparkIcon,
+  UploadIcon,
+} from "./icons";
 
 interface Props {
   onUpload: (file: File) => void;
@@ -39,129 +48,136 @@ export default function FileUpload({ onUpload, compact, fileName }: Props) {
     [handleFile],
   );
 
+  const input = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept=".docx,.doc"
+      hidden
+      onChange={onInputChange}
+    />
+  );
+
   if (compact) {
     return (
-      <div>
+      <div className="panel flex items-center gap-3 p-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+          <DocumentIcon className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-slate-800" title={fileName}>
+            {fileName || "未命名文档"}
+          </p>
+          <p className="text-xs text-slate-400">Word 文档</p>
+        </div>
         <button
+          type="button"
           onClick={() => inputRef.current?.click()}
-          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          className="btn btn-ghost h-8 px-2.5 text-xs text-brand-600 hover:bg-brand-50 hover:text-brand-700"
         >
-          {fileName ? `\u{1F4C4} ${fileName}` : "\u91CD\u65B0\u4E0A\u4F20\u6587\u4EF6"}
+          更换
         </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".docx,.doc"
-          hidden
-          onChange={onInputChange}
-        />
+        {input}
       </div>
     );
   }
 
   const features = [
-    { icon: FileIcon, title: "\u667A\u80FD\u89E3\u6790", desc: "\u81EA\u52A8\u8BC6\u522B\u4F5C\u6587\u7ED3\u6784\u4E0E\u91CD\u590D\u6A21\u5F0F" },
-    { icon: ColumnsIcon, title: "\u591A\u680F\u6392\u7248", desc: "\u7D27\u51D1\u586B\u5145 A4 \u9875\u9762\uFF0C\u652F\u6301 1\u20136 \u680F" },
-    { icon: PdfIcon, title: "\u77E2\u91CF PDF", desc: "\u5168\u5E73\u53F0\u4E00\u81F4\u7684\u9AD8\u8D28\u91CF\u8F93\u51FA" },
+    { icon: SparkIcon, title: "智能解析", desc: "识别作文结构与重复模式" },
+    { icon: ColumnsIcon, title: "多栏排版", desc: "紧凑填充 A4，支持 1–6 栏" },
+    { icon: PdfIcon, title: "矢量 PDF", desc: "全平台一致的高质量输出" },
   ];
 
   return (
-    <div className="flex flex-col overflow-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50" style={{ height: "100dvh" }}>
-      <div className="flex flex-1 flex-col items-center justify-center overflow-hidden px-4 sm:px-8">
-        <div className="mb-6 text-center sm:mb-10">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-            {"\u4F5C\u6587\u5206\u680F\u5DE5\u5177"}
+    <div className="relative flex flex-col overflow-hidden bg-slate-50" style={{ minHeight: "100dvh" }}>
+      {/* 背景装饰 */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(60%_100%_at_50%_0%,var(--color-brand-100)_0%,transparent_100%)] opacity-70"
+      />
+
+      <header className="relative flex items-center gap-2.5 px-5 pt-5 sm:px-8 sm:pt-6">
+        <LogoMark className="h-8 w-8" />
+        <span className="text-[15px] font-semibold text-slate-900">作文分栏</span>
+      </header>
+
+      <main className="relative flex flex-1 flex-col items-center justify-center px-5 py-8 sm:px-8">
+        <div className="mb-7 text-center sm:mb-10">
+          <h1 className="text-[26px] leading-tight font-bold tracking-tight text-slate-900 sm:text-4xl">
+            作文一键分栏排版
           </h1>
-          <p className="mt-2 text-sm text-gray-500 sm:text-base">
-            {"\u4E0A\u4F20 Word \u6587\u6863\uFF0C\u81EA\u52A8\u591A\u680F\u6392\u7248\uFF0C\u4E00\u952E\u5BFC\u51FA PDF"}
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-500 sm:text-base">
+            上传 Word 文档，自动识别作文并紧凑排入多栏 A4 页面，一键导出 PDF。
           </p>
         </div>
 
         <div
+          role="button"
+          tabIndex={0}
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           onClick={() => inputRef.current?.click()}
-          className={`group relative w-full max-w-lg cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-200 sm:p-14 ${
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
+          className={`group w-full max-w-xl cursor-pointer rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-500 sm:px-10 sm:py-14 ${
             dragging
-              ? "scale-[1.02] border-blue-500 bg-blue-50/80 shadow-lg shadow-blue-100"
-              : "border-gray-300/80 bg-white/60 shadow-sm backdrop-blur hover:border-blue-400 hover:bg-white hover:shadow-md"
+              ? "scale-[1.01] border-brand-500 bg-brand-50 shadow-lg shadow-brand-500/10"
+              : "border-slate-300 bg-white shadow-sm hover:border-brand-400 hover:shadow-md"
           }`}
         >
-          <div className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl transition-colors ${
-            dragging ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500"
-          }`}>
-            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-            </svg>
+          <div
+            className={`mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl transition-colors ${
+              dragging
+                ? "bg-brand-600 text-white"
+                : "bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white"
+            }`}
+          >
+            <UploadIcon className="h-7 w-7" />
           </div>
-          <p className="text-base font-medium text-gray-700 sm:text-lg">
-            {"\u62D6\u62FD .docx \u6587\u4EF6\u5230\u6B64\u5904"}
+          <p className="text-base font-semibold text-slate-800 sm:text-lg">
+            <span className="hidden sm:inline">拖拽 .docx 文件到这里，或</span>
+            <span className="text-brand-600">点击选择文件</span>
           </p>
-          <p className="mt-1.5 text-xs text-gray-400 sm:text-sm">
-            {"\u6216\u70B9\u51FB\u9009\u62E9\u6587\u4EF6"}
+          <p className="mt-2 text-xs text-slate-400 sm:text-sm">
+            文件仅在浏览器本地处理，不会上传到服务器
           </p>
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".docx,.doc"
-            hidden
-            onChange={onInputChange}
-          />
+          {input}
         </div>
 
-        <div className="mt-6 grid w-full max-w-lg grid-cols-3 gap-3 sm:mt-10 sm:gap-5">
+        <div className="mt-8 grid w-full max-w-xl grid-cols-3 gap-2.5 sm:mt-10 sm:gap-4">
           {features.map((f) => (
-            <div key={f.title} className="flex flex-col items-center rounded-xl bg-white/70 px-3 py-3 shadow-sm backdrop-blur sm:px-4 sm:py-5">
-              <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-500 sm:h-10 sm:w-10">
-                <f.icon />
-              </div>
-              <span className="text-xs font-medium text-gray-800 sm:text-sm">{f.title}</span>
-              <span className="mt-0.5 text-center text-[10px] leading-tight text-gray-400 sm:text-[11px]">{f.desc}</span>
+            <div
+              key={f.title}
+              className="flex flex-col items-center rounded-xl border border-slate-200/80 bg-white/80 px-2 py-3.5 text-center sm:items-start sm:px-4 sm:py-4 sm:text-left"
+            >
+              <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                <f.icon className="h-[18px] w-[18px]" />
+              </span>
+              <span className="text-xs font-semibold text-slate-800 sm:text-sm">{f.title}</span>
+              <span className="mt-1 text-[11px] leading-snug text-slate-400 sm:text-xs">{f.desc}</span>
             </div>
           ))}
         </div>
-      </div>
+      </main>
 
-      <footer className="flex shrink-0 items-center justify-center gap-3 pb-4 pt-2 text-xs text-gray-400">
+      <footer className="relative flex shrink-0 items-center justify-center gap-3 pb-5 pt-2 text-xs text-slate-400">
         <span>Powered by 7revor · {__APP_VERSION__}</span>
-        <span className="text-gray-300">|</span>
+        <span className="text-slate-300">|</span>
         <a
           href="https://github.com/7revor/essay-columns"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-gray-400 transition-colors hover:text-gray-600"
+          className="inline-flex items-center gap-1 transition-colors hover:text-slate-600"
         >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/>
-          </svg>
+          <GitHubIcon />
           GitHub
         </a>
       </footer>
     </div>
-  );
-}
-
-function FileIcon() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm3.75 11.625a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-    </svg>
-  );
-}
-
-function ColumnsIcon() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125z" />
-    </svg>
-  );
-}
-
-function PdfIcon() {
-  return (
-    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-    </svg>
   );
 }
