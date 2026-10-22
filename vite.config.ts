@@ -20,7 +20,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          mammoth: ["mammoth"],
+          jszip: ["jszip"],
           react: ["react", "react-dom"],
         },
       },
