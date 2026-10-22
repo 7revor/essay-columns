@@ -241,8 +241,19 @@ function byRepeatedLines(context: Context): Segment[] | null {
     else positions.set(block.text, [index]);
   });
 
+  // 多数出现处紧跟正文长段的重复行是同名题目（如多名学生都写“我最喜爱的积木”），
+  // 不是每篇固定的抬头。
+  const followedByBody = (index: number) => {
+    const next = index + 1;
+    return (
+      next < context.blocks.length &&
+      context.meta[next] === null &&
+      !isTitleLike(context.blocks[next].text)
+    );
+  };
   const leading = [...positions.values()]
     .filter((list) => list[0] <= 2)
+    .filter((list) => list.filter(followedByBody).length * 2 < list.length)
     .sort((a, b) => b.length - a.length || a[0] - b[0]);
   if (leading.length > 0) {
     const anchors = leading[0];

@@ -516,6 +516,20 @@ test("题目在信息行之前的单节合并文档", () => {
   );
 });
 
+test("重名题目不会被当作每篇的抬头", () => {
+  const titles = ["我最喜爱的积木", "我喜欢的玩具", "我最喜爱的积木"];
+  const lines = titles.flatMap((title, i) => [
+    ...(i > 0 ? ["", ""] : []),
+    title,
+    `正文${i + 1}第一段。`,
+    `正文${i + 1}第二段。`,
+  ]);
+  assert.deepEqual(
+    render(parseTextEssays(lines)),
+    titles.map((title, i) => expected("", title, `正文${i + 1}第一段。`, `正文${i + 1}第二段。`)),
+  );
+});
+
 test("『第N篇』编号分隔", () => {
   assert.deepEqual(
     render(parseTextEssays(repeat((i) => [`第${i}篇`, `题目${i}`, `正文${i}。`]))),
