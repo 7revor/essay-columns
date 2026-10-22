@@ -16,10 +16,18 @@ import {
 import { measureEssayHeights, computeLayout } from "./utils/layoutEngine";
 import { generatePDF } from "./utils/pdfGenerator";
 import { preloadFont } from "./utils/fontLoader";
-import FileUpload from "./components/FileUpload";
+import FileUpload, { FilePickerButton } from "./components/FileUpload";
 import PatternPanel from "./components/PatternPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import Preview from "./components/Preview";
+import {
+  ArrowLeftIcon,
+  CloseIcon,
+  DownloadIcon,
+  LogoMark,
+  SlidersIcon,
+  SwapIcon,
+} from "./components/icons";
 
 export default function App() {
   const [fontLoaded, setFontLoaded] = useState(false);
@@ -32,6 +40,8 @@ export default function App() {
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportMsg, setExportMsg] = useState("");
   const measureRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,21 +50,22 @@ export default function App() {
       .catch(() => setParseError("字体加载失败，请刷新页面重试"));
   }, []);
 
+  // 解析成功才替换当前结果；在结果页重新上传失败时保留原有内容并提示错误
   const handleUpload = useCallback(async (file: File) => {
     setParsing(true);
     setParseError("");
     try {
-      setFileName(file.name);
       const parsed = await parseDocx(file);
       if (parsed.length === 0) {
         setParseError("未能识别出任何作文，请检查文档格式");
-        setParsing(false);
         return;
       }
-      setEssays(parsed);
       const detected = detectPatterns(parsed);
+      setFileName(file.name);
+      setEssays(parsed);
       setPatterns(detected);
       setRemovedIds(defaultRemovedIds(detected));
+      setDrawerOpen(false);
     } catch (err) {
       setParseError(
         `解析失败: ${err instanceof Error ? err.message : "未知错误"}`,
@@ -62,6 +73,22 @@ export default function App() {
     } finally {
       setParsing(false);
     }
+  }, []);
+
+  const handleReject = useCallback((file: File) => {
+    setParseError(`不支持的文件类型：${file.name}，请选择 .docx 文档`);
+  }, []);
+
+  // 返回首页：清空当前文档的解析结果与提示信息，排版设置保留
+  const handleBack = useCallback(() => {
+    setEssays([]);
+    setPatterns([]);
+    setRemovedIds(new Set());
+    setPages([]);
+    setFileName("");
+    setParseError("");
+    setExportMsg("");
+    setDrawerOpen(false);
   }, []);
 
   const essayContents = useMemo<EssayContent[]>(
@@ -87,9 +114,6 @@ export default function App() {
     setPages(computeLayout(heights, settings));
   }, [fontLoaded, essayContents, settings]);
 
-  const [exporting, setExporting] = useState(false);
-  const [exportMsg, setExportMsg] = useState("");
-
   const handleExport = useCallback(async () => {
     if (essayContents.length === 0 || exporting) return;
     setExporting(true);
@@ -110,30 +134,43 @@ export default function App() {
   if (essays.length === 0) {
     return (
       <div>
-        <FileUpload onUpload={handleUpload} />
-        {!fontLoaded && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-lg bg-gray-800 px-5 py-3 text-sm text-white shadow-lg">
-            正在加载字体…
-          </div>
-        )}
-        {parsing && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/20">
-            <div className="rounded-xl bg-white px-8 py-5 shadow-lg">
-              <p className="text-sm text-gray-700">正在解析文档…</p>
-            </div>
-          </div>
-        )}
+        <FileUpload onUpload={handleUpload} onReject={handleReject} />
+        {!fontLoaded && <Toast>正在加载字体…</Toast>}
+        {parsing && <BusyOverlay>正在解析文档…</BusyOverlay>}
         {parseError && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-lg bg-red-600 px-5 py-3 text-sm text-white shadow-lg">
+          <Toast tone="error" onClose={() => setParseError("")}>
             {parseError}
-          </div>
+          </Toast>
         )}
       </div>
     );
   }
 
+  const sidebarContent = (
+    <>
+      <FileUpload
+        onUpload={handleUpload}
+        onReject={handleReject}
+        compact
+        fileName={fileName}
+      />
+
+      <div className="grid grid-cols-2 gap-2">
+        <Stat label="识别作文" value={essays.length} unit="篇" />
+        <Stat label="输出页数" value={pages.length} unit="页" />
+      </div>
+
+      <PatternPanel
+        patterns={patterns}
+        removedIds={removedIds}
+        onChange={setRemovedIds}
+      />
+      <SettingsPanel settings={settings} onChange={setSettings} />
+    </>
+  );
+
   return (
-    <div className="flex flex-col bg-gray-50" style={{ height: "100dvh" }}>
+    <div className="flex flex-col bg-slate-50" style={{ height: "100dvh" }}>
       {/* Hidden measurement container */}
       <div
         ref={measureRef}
@@ -146,81 +183,98 @@ export default function App() {
       />
 
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-3 py-2 sm:px-4">
-        <h1 className="text-sm font-bold text-gray-800">作文分栏工具</h1>
-        <div className="flex items-center gap-2">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
           <button
-            onClick={() => setDrawerOpen(true)}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 md:hidden"
+            type="button"
+            onClick={handleBack}
+            disabled={exporting}
+            aria-label="返回首页"
+            title="返回首页（清空当前结果）"
+            className="btn btn-ghost btn-icon -ml-1 sm:w-auto sm:px-2.5"
           >
-            设置
+            <ArrowLeftIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">返回</span>
+          </button>
+          <span className="hidden h-5 w-px bg-slate-200 sm:block" />
+          <LogoMark className="hidden h-7 w-7 sm:inline-flex" />
+          <div className="min-w-0">
+            <h1 className="truncate text-[15px] leading-tight font-semibold text-slate-900">作文分栏</h1>
+            <p className="truncate text-[11px] leading-tight text-slate-400" title={fileName}>
+              {fileName}
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <FilePickerButton
+            onUpload={handleUpload}
+            onReject={handleReject}
+            disabled={exporting}
+            title="选择新文档替换当前结果"
+            className="btn btn-secondary btn-icon sm:w-auto sm:px-3"
+          >
+            <SwapIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">重新上传</span>
+          </FilePickerButton>
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="设置"
+            className="btn btn-secondary btn-icon md:hidden"
+          >
+            <SlidersIcon className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={handleExport}
             disabled={essayContents.length === 0 || exporting}
-            className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="btn btn-primary"
           >
-            {exporting ? "导出中…" : "导出 PDF"}
+            <DownloadIcon className="h-4 w-4" />
+            {exporting ? "导出中…" : (
+              <>
+                导出<span className="hidden sm:inline"> PDF</span>
+              </>
+            )}
           </button>
         </div>
       </header>
 
       <div className="flex min-h-0 flex-1">
         {/* Sidebar — desktop */}
-        <aside className="hidden w-72 shrink-0 flex-col gap-3 overflow-y-auto border-r border-gray-200 bg-white p-3 md:flex">
-          <FileUpload onUpload={handleUpload} compact fileName={fileName} />
-
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-            识别到 <strong>{essays.length}</strong> 篇作文 · 输出{" "}
-            <strong>{pages.length}</strong> 页
-          </div>
-
-          <PatternPanel
-            patterns={patterns}
-            removedIds={removedIds}
-            onChange={setRemovedIds}
-          />
-          <SettingsPanel settings={settings} onChange={setSettings} />
+        <aside className="hidden w-80 shrink-0 flex-col gap-3 overflow-y-auto border-r border-slate-200 bg-slate-50 p-4 md:flex">
+          {sidebarContent}
         </aside>
 
         {/* Drawer — mobile */}
         {drawerOpen && (
           <div className="fixed inset-0 z-50 md:hidden">
             <div
-              className="absolute inset-0 bg-black/30"
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
               onClick={() => setDrawerOpen(false)}
             />
-            <aside className="absolute bottom-0 left-0 right-0 flex max-h-[80vh] flex-col rounded-t-2xl bg-white shadow-xl">
-              <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-                <span className="text-sm font-semibold text-gray-800">设置</span>
+            <aside className="absolute right-0 bottom-0 left-0 flex max-h-[85dvh] flex-col rounded-t-2xl bg-slate-50 shadow-2xl">
+              <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-slate-300" />
+              <div className="flex shrink-0 items-center justify-between px-4 pt-2 pb-1">
+                <span className="text-base font-semibold text-slate-900">设置</span>
                 <button
+                  type="button"
                   onClick={() => setDrawerOpen(false)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
+                  aria-label="关闭"
+                  className="btn btn-ghost btn-icon rounded-full"
                 >
-                  ✕
+                  <CloseIcon className="h-5 w-5" />
                 </button>
               </div>
-              <div className="flex flex-col gap-3 overflow-y-auto p-3">
-                <FileUpload onUpload={handleUpload} compact fileName={fileName} />
-
-                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                  识别到 <strong>{essays.length}</strong> 篇作文 · 输出{" "}
-                  <strong>{pages.length}</strong> 页
-                </div>
-
-                <PatternPanel
-                  patterns={patterns}
-                  removedIds={removedIds}
-                  onChange={setRemovedIds}
-                />
-                <SettingsPanel settings={settings} onChange={setSettings} />
+              <div className="flex flex-col gap-3 overflow-y-auto px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                {sidebarContent}
               </div>
             </aside>
           </div>
         )}
 
         {/* Preview */}
-        <main className="min-h-0 min-w-0 flex-1 overflow-hidden bg-gray-100">
+        <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
           <Preview
             pages={pages}
             essayContents={essayContents}
@@ -229,12 +283,66 @@ export default function App() {
         </main>
       </div>
 
-      {exportMsg && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20">
-          <div className="rounded-xl bg-white px-8 py-5 shadow-lg">
-            <p className="text-sm text-gray-700">{exportMsg}</p>
-          </div>
-        </div>
+      {parsing && <BusyOverlay>正在解析文档…</BusyOverlay>}
+      {parseError && (
+        <Toast tone="error" onClose={() => setParseError("")}>
+          {parseError}
+        </Toast>
+      )}
+      {exportMsg && <BusyOverlay>{exportMsg}</BusyOverlay>}
+    </div>
+  );
+}
+
+function Stat({ label, value, unit }: { label: string; value: number; unit: string }) {
+  return (
+    <div className="panel px-3.5 py-2.5">
+      <p className="text-[11px] text-slate-400">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+        {value}
+        <span className="ml-0.5 text-xs font-normal text-slate-400">{unit}</span>
+      </p>
+    </div>
+  );
+}
+
+function BusyOverlay({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/25 px-6 backdrop-blur-[2px]">
+      <div className="flex items-center gap-3 rounded-xl bg-white px-6 py-4 shadow-xl ring-1 ring-slate-900/5">
+        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
+        <p className="text-sm text-slate-700">{children}</p>
+      </div>
+    </div>
+  );
+}
+
+function Toast({
+  tone = "neutral",
+  onClose,
+  children,
+}: {
+  tone?: "neutral" | "error";
+  onClose?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      role={tone === "error" ? "alert" : "status"}
+      className={`fixed bottom-6 left-1/2 z-[110] flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-2 rounded-lg py-2.5 pl-4 text-sm text-white shadow-lg ${
+        onClose ? "pr-2" : "pr-4"
+      } ${tone === "error" ? "bg-red-600" : "bg-slate-800"}`}
+    >
+      <span className="min-w-0 [overflow-wrap:anywhere]">{children}</span>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="关闭提示"
+          className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-white/80 hover:bg-white/15 hover:text-white"
+        >
+          <CloseIcon className="h-4 w-4" />
+        </button>
       )}
     </div>
   );

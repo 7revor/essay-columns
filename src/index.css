@@ -1,7 +1,76 @@
 @import "tailwindcss";
 
+/*
+ * 界面设计令牌。仅作用于应用外壳（侧栏、工具栏、按钮等）；
+ * A4 预览页与测量容器均以内联样式指定字体、字号、行高，与 PDF 输出保持一致，
+ * 因此这里不要设置 letter-spacing、word-break 等会被继承并影响排版的全局属性。
+ */
+@theme {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Noto Sans CJK SC", "Segoe UI", sans-serif;
+
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #dbe6fe;
+  --color-brand-200: #bfd2fe;
+  --color-brand-300: #93b4fd;
+  --color-brand-400: #608bfa;
+  --color-brand-500: #3d66f5;
+  --color-brand-600: #2747ea;
+  --color-brand-700: #1f36d6;
+  --color-brand-800: #2030ad;
+  --color-brand-900: #1f2f88;
+}
+
 * {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--color-slate-50);
+  color: var(--color-slate-800);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-brand-600 text-white shadow-sm shadow-brand-600/20 hover:bg-brand-700 active:bg-brand-800;
+  }
+  .btn-secondary {
+    @apply border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100;
+  }
+  .btn-ghost {
+    @apply text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200;
+  }
+  .btn-icon {
+    @apply w-9 px-0;
+  }
+
+  .panel {
+    @apply rounded-xl border border-slate-200 bg-white shadow-xs;
+  }
+  .panel-header {
+    @apply flex items-baseline justify-between gap-2 border-b border-slate-100 px-4 py-3;
+  }
+  .panel-title {
+    @apply text-sm font-semibold text-slate-900;
+  }
+  .panel-hint {
+    @apply text-xs text-slate-400;
+  }
+
+  .field-label {
+    @apply mb-1 block text-xs text-slate-500;
+  }
+  .field-input {
+    @apply h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-800 tabular-nums transition-colors hover:border-slate-300 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none;
+  }
+
+  .checkbox {
+    @apply h-4 w-4 shrink-0 cursor-pointer rounded accent-brand-600;
+  }
 }
