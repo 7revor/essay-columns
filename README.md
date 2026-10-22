@@ -4,8 +4,8 @@
 
 ## 功能特性
 
-- **DOCX 智能解析** — 基于 mammoth.js 提取文本，按「姓名/班级」标头自动拆分作文
-- **重复模式检测** — 识别分隔符、装饰行等重复内容，支持逐项勾选过滤
+- **DOCX 智能解析** — 直接读取 OOXML 结构，综合个人信息、分页分节、编号、模板行、标题样式等信号拆分作文，并识别页头、题目与正文
+- **重复模式检测** — 识别模板行、篇章编号和跨篇重复段落，支持逐项勾选过滤
 - **多栏排版引擎** — 自动计算分栏布局，紧凑填充 A4 页面，支持 1–6 栏
 - **实时预览** — 可缩放的所见即所得页面预览，支持缩放与适应屏幕
 - **矢量 PDF 导出** — 基于 pdfmake 生成矢量 PDF，文字可选可搜索
@@ -20,7 +20,7 @@
 | 框架 | React 19 + TypeScript |
 | 构建 | Vite 6 |
 | 样式 | Tailwind CSS 4 |
-| 文档解析 | mammoth.js |
+| 文档解析 | JSZip + DOMParser（OOXML） |
 | PDF 生成 | pdfmake（snaking columns + unbreakable） |
 | 字体 | Source Han Serif SC (WOFF, CDN) |
 | 部署 | Cloudflare Pages |
@@ -55,7 +55,11 @@ src/
 │   ├── SettingsPanel.tsx     # 排版参数设置
 │   └── Preview.tsx           # A4 页面缩放预览
 └── utils/
-    ├── docxParser.ts         # DOCX 解析与作文拆分
+    ├── docxParser.ts         # 解析入口（DOCX / 纯文本）
+    ├── docxStructure.ts      # OOXML 文本块与页眉、样式读取
+    ├── segmentation.ts       # 多信号作文切分
+    ├── essayRoles.ts         # 行角色分类（信息/模板/编号/题目/正文）
+    ├── textPatterns.ts       # 个人信息、题目、编号的文本规则
     ├── patternDetection.ts   # 重复模式检测算法
     ├── layoutEngine.ts       # 分栏高度测量与分页计算
     ├── renderUtils.ts        # 预览 HTML 渲染

@@ -1,49 +1,71 @@
 import type { Essay, EssayContent, DetectedPattern } from "../types";
-import { isInfoLine } from "./textPatterns.ts";
 
-export function detectPatterns(
-  essays: Essay[],
-): DetectedPattern[] {
+function preview(text: string): string {
+  return text.length > 30 ? text.slice(0, 30) + "…" : text;
+}
+
+export function detectPatterns(essays: Essay[]): DetectedPattern[] {
   const patterns: DetectedPattern[] = [];
 
-  if (essays.length > 0 && essays[0].delimiter) {
+  const markers = essays.flatMap((essay) =>
+    essay.lines.filter((line) => line.role === "marker").map((line) => line.text),
+  );
+  if (markers.length > 0) {
     patterns.push({
-      id: "delimiter",
-      label: `分隔标记: "${essays[0].delimiter.length > 30 ? essays[0].delimiter.slice(0, 30) + "…" : essays[0].delimiter}"`,
-      count: essays.length,
-      examples: [essays[0].delimiter],
+      id: "marker",
+      label: `篇章编号: "${preview(markers[0])}" 等`,
+      count: markers.length,
+      examples: [...new Set(markers)],
       type: "header",
     });
   }
 
-  const paraFreq = new Map<string, { count: number }>();
-  for (const essay of essays) {
-    const seen = new Set<string>();
-    for (const p of essay.paragraphs) {
-      const n = p.trim();
-      if (!n || seen.has(n)) continue;
-      seen.add(n);
-      const e = paraFreq.get(n);
-      if (e) e.count++;
-      else paraFreq.set(n, { count: 1 });
+  const countByRole = (role: "template" | "body") => {
+    const counts = new Map<string, number>();
+    for (const essay of essays) {
+      const seen = new Set<string>();
+      for (const line of essay.lines) {
+        if (line.role !== role || seen.has(line.text)) continue;
+        seen.add(line.text);
+        counts.set(line.text, (counts.get(line.text) ?? 0) + 1);
+      }
     }
+    return counts;
+  };
+
+  let index = 0;
+  for (const [text, count] of countByRole("template")) {
+    patterns.push({
+      id: `template-${index++}`,
+      label: `模板行: "${preview(text)}"`,
+      count,
+      examples: [text],
+      type: "header",
+    });
   }
 
+  // 正文中跨篇重复的段落仅供用户选择删除，默认保留，避免误删真实内容。
   const threshold = Math.max(3, Math.floor(essays.length * 0.3));
-  let idx = 0;
-  for (const [text, info] of paraFreq) {
-    if (info.count >= threshold) {
-      patterns.push({
-        id: `dup-${idx++}`,
-        label: `重复内容: "${text.length > 30 ? text.slice(0, 30) + "…" : text}"`,
-        count: info.count,
-        examples: [text],
-        type: "decorative",
-      });
-    }
+  index = 0;
+  for (const [text, count] of countByRole("body")) {
+    if (count < threshold) continue;
+    patterns.push({
+      id: `dup-${index++}`,
+      label: `重复内容: "${preview(text)}"`,
+      count,
+      examples: [text],
+      type: "decorative",
+    });
   }
 
   return patterns;
+}
+
+/** 默认删除结构性模式（模板行、篇章编号），正文重复内容默认保留。 */
+export function defaultRemovedIds(patterns: DetectedPattern[]): Set<string> {
+  return new Set(
+    patterns.filter((p) => p.type === "header").map((p) => p.id),
+  );
 }
 
 export function filterEssay(
@@ -53,43 +75,44 @@ export function filterEssay(
   titleAsFirstParagraph: boolean,
   stripInfoLines: boolean,
 ): EssayContent {
-  const decorativeTexts = new Set<string>();
-  for (const p of patterns) {
-    if (!removedIds.has(p.id) || p.type !== "decorative") continue;
-    for (const ex of p.examples) decorativeTexts.add(ex);
+  const removedStructure = new Set<string>();
+  const removedBody = new Set<string>();
+  for (const pattern of patterns) {
+    if (!removedIds.has(pattern.id)) continue;
+    const target = pattern.type === "decorative" ? removedBody : removedStructure;
+    for (const example of pattern.examples) target.add(example);
   }
 
-  let filtered = essay.paragraphs.filter(
-    (p) => !decorativeTexts.has(p.trim()),
-  );
+  const sourceHeader = essay.sourceHeader?.trim();
+  const headerParts = sourceHeader ? [sourceHeader] : [];
+  const paragraphs: string[] = [];
+  let title = "";
 
-  let header = essay.sourceHeader?.trim() || undefined;
-
-  if (stripInfoLines) {
-    const infoLines: string[] = [];
-    const rest: string[] = [];
-    for (const line of filtered) {
-      if (isInfoLine(line) && rest.length === 0) {
-        infoLines.push(line);
-      } else {
-        rest.push(line);
-      }
+  for (const { text, role } of essay.lines) {
+    switch (role) {
+      case "meta":
+        if (!stripInfoLines) paragraphs.push(text);
+        else if (!headerParts.includes(text)) headerParts.push(text);
+        break;
+      case "template":
+      case "marker":
+        if (!removedStructure.has(text)) paragraphs.push(text);
+        break;
+      case "title":
+        if (titleAsFirstParagraph && !title) title = text;
+        else paragraphs.push(text);
+        break;
+      case "body":
+        if (!removedBody.has(text)) paragraphs.push(text);
+        break;
     }
-    if (infoLines.length > 0) {
-      const inlineHeader = infoLines.join("  ");
-      if (!header) header = inlineHeader;
-      else if (header !== inlineHeader) header = `${header}  ${inlineHeader}`;
-      filtered = rest;
-    }
   }
 
-  if (!removedIds.has("delimiter") && essay.delimiter) {
-    header = header ? `${essay.delimiter}  ${header}` : essay.delimiter;
-  }
+  if (titleAsFirstParagraph && !title) title = paragraphs.shift() ?? "";
 
   return {
-    header,
-    title: titleAsFirstParagraph ? filtered[0] || "" : "",
-    paragraphs: titleAsFirstParagraph ? filtered.slice(1) : filtered,
+    header: headerParts.length > 0 ? headerParts.join("  ") : undefined,
+    title,
+    paragraphs,
   };
 }

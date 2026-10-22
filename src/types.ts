@@ -1,6 +1,21 @@
+/**
+ * 行在作文中的角色：
+ * - meta：个人信息（姓名、班级、指导老师等），默认移入页头；
+ * - template：各篇共有的模板行（如“作文批改报告”），默认删除；
+ * - marker：纯篇章编号（如“第1篇”），默认删除；
+ * - title：题目；body：正文。
+ */
+export type LineRole = "meta" | "template" | "marker" | "title" | "body";
+
+export interface EssayLine {
+  text: string;
+  role: LineRole;
+}
+
 export interface Essay {
-  delimiter: string;
-  paragraphs: string[];
+  /** 按原文顺序排列的行。 */
+  lines: EssayLine[];
+  /** 来自真实页眉的页头。 */
   sourceHeader?: string;
 }
 

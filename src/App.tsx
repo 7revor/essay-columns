@@ -8,7 +8,11 @@ import type {
 } from "./types";
 import { DEFAULT_SETTINGS } from "./types";
 import { parseDocx } from "./utils/docxParser";
-import { detectPatterns, filterEssay } from "./utils/patternDetection";
+import {
+  defaultRemovedIds,
+  detectPatterns,
+  filterEssay,
+} from "./utils/patternDetection";
 import { measureEssayHeights, computeLayout } from "./utils/layoutEngine";
 import { generatePDF } from "./utils/pdfGenerator";
 import { preloadFont } from "./utils/fontLoader";
@@ -50,13 +54,7 @@ export default function App() {
       setEssays(parsed);
       const detected = detectPatterns(parsed);
       setPatterns(detected);
-      setRemovedIds(
-        new Set(
-          detected
-            .filter((p) => p.type === "header" || p.count >= parsed.length - 2)
-            .map((p) => p.id),
-        ),
-      );
+      setRemovedIds(defaultRemovedIds(detected));
     } catch (err) {
       setParseError(
         `解析失败: ${err instanceof Error ? err.message : "未知错误"}`,
