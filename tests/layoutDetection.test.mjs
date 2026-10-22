@@ -5,9 +5,12 @@ import { DOMParser as XmlDomParser } from "@xmldom/xmldom";
 
 globalThis.DOMParser = XmlDomParser;
 
-const { parseDocx, parseTextEssays } = await import(
+const { parseDocx, parseTextEssays, textBlocks } = await import(
   "../src/utils/docxParser.ts"
 );
+const { readDocx } = await import("../src/utils/docxStructure.ts");
+const { analyzeLines } = await import("../src/utils/lineFeatures.ts");
+const { segmentLines } = await import("../src/utils/segmentation.ts");
 const { defaultRemovedIds, detectPatterns, filterEssay } = await import(
   "../src/utils/patternDetection.ts"
 );
@@ -649,4 +652,44 @@ test("模板行可在模式面板中取消删除", () => {
   const content = filterEssay(essays[0], kept, patterns, true, true);
   assert.equal(content.title, "题目1");
   assert.deepEqual(content.paragraphs, ["作文批改报告", "正文1。"]);
+});
+
+// ---------- 切分筛子 ----------
+
+function textStrategy(lines) {
+  return segmentLines(analyzeLines(textBlocks(lines))).strategy;
+}
+
+async function docxStrategy(options) {
+  const { blocks, sections } = await readDocx(await makeDocx(options));
+  return segmentLines(analyzeLines(blocks, sections)).strategy;
+}
+
+test("各类文档由对应的切分筛子生效", async () => {
+  assert.equal(textStrategy(repeat((i) => [info(i), `题目${i}`, `正文${i}。`])), "metaLines");
+  assert.equal(textStrategy(repeat((i) => [`第${i}篇`, `题目${i}`, `正文${i}。`])), "markers");
+  assert.equal(
+    textStrategy(repeat((i) => [`题目${i}`, `正文${i}。`, "（完）"])),
+    "repeatedLines",
+  );
+  assert.equal(
+    textStrategy(["题目1", "正文1。", "", "", "题目2", "正文2。"]),
+    "blankRuns",
+  );
+  assert.equal(textStrategy(["我的寒假", "一、学做饭", "我学会了炒鸡蛋。"]), "single");
+
+  const paged = ids
+    .map((i) => (i > 1 ? PAGE_BREAK : "") + P(`题目${i}`) + P(`正文${i}。`))
+    .join("");
+  assert.equal(await docxStrategy({ body: paged }), "hardBoundaries");
+
+  const headed = ids
+    .map((i) => P(`题目${i}`, { style: "Heading1" }) + P(`正文${i}。`))
+    .join("");
+  assert.equal(await docxStrategy({ body: headed, styles: HEADING_STYLES }), "headings");
+
+  const centered = ids
+    .map((i) => P(`题目${i}`, { center: true }) + P(`正文${i}第一段。`) + P(`正文${i}第二段。`))
+    .join("");
+  assert.equal(await docxStrategy({ body: centered }), "centeredTitles");
 });

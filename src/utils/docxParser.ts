@@ -11,6 +11,11 @@ export async function parseDocx(file: Blob): Promise<Essay[]> {
 
 /** 纯文本入口：每行一段，空行表示空段。 */
 export function parseTextEssays(lines: string[]): Essay[] {
+  return buildEssays({ blocks: textBlocks(lines), sections: [] });
+}
+
+/** 把纯文本行转成文本块，空行计入下一块的 blankBefore。 */
+export function textBlocks(lines: string[]): DocxBlock[] {
   const blocks: DocxBlock[] = [];
   let blankBefore = 0;
   for (const line of lines) {
@@ -29,7 +34,7 @@ export function parseTextEssays(lines: string[]): Essay[] {
     });
     blankBefore = 0;
   }
-  return buildEssays({ blocks, sections: [] });
+  return blocks;
 }
 
 function buildEssays(content: DocxContent): Essay[] {
