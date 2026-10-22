@@ -209,7 +209,7 @@ test("批改报告模板：抬头和小节标签不当作题目，两篇也能�
   );
 });
 
-test("分节文档中题目位于个人信息行之前", TODO, async () => {
+test("分节文档中题目位于个人信息行之前", async () => {
   const body = ids
     .map(
       (i) =>
@@ -224,7 +224,7 @@ test("分节文档中题目位于个人信息行之前", TODO, async () => {
   );
 });
 
-test("块级内容控件中的正文不会丢失", TODO, async () => {
+test("块级内容控件中的正文不会丢失", async () => {
   const body = [1, 2]
     .map((i) => sdt(P(info(i)) + P(`题目${i}`) + P(`正文${i}。`)))
     .join("");
@@ -234,7 +234,7 @@ test("块级内容控件中的正文不会丢失", TODO, async () => {
   );
 });
 
-test("文本框的 Choice/Fallback 双份内容只读取一次", TODO, async () => {
+test("文本框的 Choice/Fallback 双份内容只读取一次", async () => {
   const body = [1, 2]
     .map((i) => textBoxParagraph(P(info(i))) + P(`题目${i}`) + P(`正文${i}。`))
     .join("");
@@ -311,7 +311,7 @@ test("每节独立页眉作为对应作文的个人信息", async () => {
   );
 });
 
-test("连续分节和共享页眉不会把普通文档拆成多篇", TODO, async () => {
+test("连续分节和共享页眉不会把普通文档拆成多篇", async () => {
   const body =
     P("唯一的题目") +
     P("第一部分。", { sectPr: sectPr("rIdShared", "continuous") }) +
@@ -321,6 +321,31 @@ test("连续分节和共享页眉不会把普通文档拆成多篇", TODO, async
     await renderDocx(await makeDocx({ body, headers: { rIdShared: "学校作文集" } })),
     [expected("", "唯一的题目", "第一部分。", "第二部分。")],
   );
+});
+
+test("页眉移入正文后仍按分节分篇并提取个人信息", async () => {
+  const body = ids
+    .map(
+      (i) =>
+        P(info(i)) +
+        P("作文批改报告") +
+        P(`题目${i}`) +
+        (i < 3
+          ? P(`正文${i}。`, { sectPr: sectPr() })
+          : P(`正文${i}。`) + sectPr()),
+    )
+    .join("");
+  assert.deepEqual(
+    await renderDocx(await makeDocx({ body })),
+    ids.map((i) => expected(info(i), `题目${i}`, `正文${i}。`)),
+  );
+});
+
+test("每节只有一段的普通换页分节不拆成多篇", async () => {
+  const body = P("第一部分", { sectPr: sectPr() }) + P("第二部分") + sectPr();
+  assert.deepEqual(await renderDocx(await makeDocx({ body })), [
+    expected("", "第一部分", "第二部分"),
+  ]);
 });
 
 // ---------- 文本层：个人信息、编号、空段 ----------

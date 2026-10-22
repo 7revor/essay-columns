@@ -1,6 +1,5 @@
-import mammoth from "mammoth";
 import type { Essay } from "../types";
-import { parseSectionEssays } from "./docxStructure.ts";
+import { readDocx, type DocxContent } from "./docxStructure.ts";
 import { isEssayBoundaryInfoLine } from "./textPatterns.ts";
 
 /**
@@ -55,19 +54,74 @@ export function findDelimiterPattern(lines: string[]): string | null {
   return best;
 }
 
-export async function parseDocx(file: File): Promise<Essay[]> {
-  const arrayBuffer = await file.arrayBuffer();
-  try {
-    const sectionEssays = await parseSectionEssays(arrayBuffer);
-    if (sectionEssays) return sectionEssays;
-  } catch (error) {
-    console.warn("DOCX 结构解析失败，已回退到纯文本识别。", error);
+export async function parseDocx(file: Blob): Promise<Essay[]> {
+  const content = await readDocx(await file.arrayBuffer());
+  return parseSectionEssays(content) ?? parseTextEssays(toLines(content));
+}
+
+/** 文本兜底的输入：每个空段对应一个空行。 */
+function toLines(content: DocxContent): string[] {
+  return content.blocks.flatMap((block) => [
+    ...Array<string>(block.blankBefore).fill(""),
+    block.text,
+  ]);
+}
+
+function parseSectionEssays(content: DocxContent): Essay[] | null {
+  const sections = content.sections
+    .map((section, index) => ({
+      header: section.header,
+      paragraphs: content.blocks
+        .filter((block) => block.section === index)
+        .map((block) => block.text),
+    }))
+    .filter((section) => section.paragraphs.length > 0);
+  if (!sectionsLookLikeEssays(sections)) return null;
+
+  return sections.map((section) => ({
+    delimiter: "",
+    paragraphs: section.paragraphs,
+    sourceHeader: section.header,
+  }));
+}
+
+function sectionsLookLikeEssays(
+  sections: { header?: string; paragraphs: string[] }[],
+): boolean {
+  if (sections.length < 2) return false;
+
+  const headers = sections
+    .map((section) => section.header?.trim())
+    .filter((header): header is string => Boolean(header));
+  const hasEnoughHeaders =
+    headers.length >= Math.max(2, Math.ceil(sections.length * 0.5));
+  if (hasEnoughHeaders) {
+    const infoHeaderCount = headers.filter(isEssayBoundaryInfoLine).length;
+    if (infoHeaderCount >= Math.ceil(headers.length * 0.5)) return true;
+
+    const distinctHeaderCount = new Set(headers).size;
+    if (
+      headers.length >= 3 &&
+      distinctHeaderCount >= Math.ceil(headers.length * 0.5)
+    ) {
+      return true;
+    }
   }
 
-  const result = await mammoth.extractRawText({ arrayBuffer });
-  const trimmedLines = result.value.split("\n").map((l) => l.trim());
+  const infoLineCount = sections.filter((section) =>
+    isEssayBoundaryInfoLine(section.paragraphs[0] || ""),
+  ).length;
+  if (infoLineCount >= Math.ceil(sections.length * 0.5)) return true;
 
-  return parseTextEssays(trimmedLines);
+  if (sections.length < 3) return false;
+  const firstParagraphFrequency = new Map<string, number>();
+  for (const section of sections) {
+    const first = section.paragraphs[0]?.trim();
+    if (!first || first.length > 100) continue;
+    firstParagraphFrequency.set(first, (firstParagraphFrequency.get(first) || 0) + 1);
+  }
+  const mostFrequent = Math.max(0, ...firstParagraphFrequency.values());
+  return mostFrequent >= Math.ceil(sections.length * 0.6);
 }
 
 export function parseTextEssays(lines: string[]): Essay[] {
