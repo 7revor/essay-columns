@@ -16,11 +16,18 @@ import {
 import { measureEssayHeights, computeLayout } from "./utils/layoutEngine";
 import { generatePDF } from "./utils/pdfGenerator";
 import { preloadFont } from "./utils/fontLoader";
-import FileUpload from "./components/FileUpload";
+import FileUpload, { FilePickerButton } from "./components/FileUpload";
 import PatternPanel from "./components/PatternPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import Preview from "./components/Preview";
-import { CloseIcon, DownloadIcon, LogoMark, SlidersIcon } from "./components/icons";
+import {
+  ArrowLeftIcon,
+  CloseIcon,
+  DownloadIcon,
+  LogoMark,
+  SlidersIcon,
+  SwapIcon,
+} from "./components/icons";
 
 export default function App() {
   const [fontLoaded, setFontLoaded] = useState(false);
@@ -33,6 +40,8 @@ export default function App() {
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportMsg, setExportMsg] = useState("");
   const measureRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,21 +50,22 @@ export default function App() {
       .catch(() => setParseError("字体加载失败，请刷新页面重试"));
   }, []);
 
+  // 解析成功才替换当前结果；在结果页重新上传失败时保留原有内容并提示错误
   const handleUpload = useCallback(async (file: File) => {
     setParsing(true);
     setParseError("");
     try {
-      setFileName(file.name);
       const parsed = await parseDocx(file);
       if (parsed.length === 0) {
         setParseError("未能识别出任何作文，请检查文档格式");
-        setParsing(false);
         return;
       }
-      setEssays(parsed);
       const detected = detectPatterns(parsed);
+      setFileName(file.name);
+      setEssays(parsed);
       setPatterns(detected);
       setRemovedIds(defaultRemovedIds(detected));
+      setDrawerOpen(false);
     } catch (err) {
       setParseError(
         `解析失败: ${err instanceof Error ? err.message : "未知错误"}`,
@@ -63,6 +73,22 @@ export default function App() {
     } finally {
       setParsing(false);
     }
+  }, []);
+
+  const handleReject = useCallback((file: File) => {
+    setParseError(`不支持的文件类型：${file.name}，请选择 .docx 文档`);
+  }, []);
+
+  // 返回首页：清空当前文档的解析结果与提示信息，排版设置保留
+  const handleBack = useCallback(() => {
+    setEssays([]);
+    setPatterns([]);
+    setRemovedIds(new Set());
+    setPages([]);
+    setFileName("");
+    setParseError("");
+    setExportMsg("");
+    setDrawerOpen(false);
   }, []);
 
   const essayContents = useMemo<EssayContent[]>(
@@ -88,9 +114,6 @@ export default function App() {
     setPages(computeLayout(heights, settings));
   }, [fontLoaded, essayContents, settings]);
 
-  const [exporting, setExporting] = useState(false);
-  const [exportMsg, setExportMsg] = useState("");
-
   const handleExport = useCallback(async () => {
     if (essayContents.length === 0 || exporting) return;
     setExporting(true);
@@ -111,17 +134,26 @@ export default function App() {
   if (essays.length === 0) {
     return (
       <div>
-        <FileUpload onUpload={handleUpload} />
+        <FileUpload onUpload={handleUpload} onReject={handleReject} />
         {!fontLoaded && <Toast>正在加载字体…</Toast>}
         {parsing && <BusyOverlay>正在解析文档…</BusyOverlay>}
-        {parseError && <Toast tone="error">{parseError}</Toast>}
+        {parseError && (
+          <Toast tone="error" onClose={() => setParseError("")}>
+            {parseError}
+          </Toast>
+        )}
       </div>
     );
   }
 
   const sidebarContent = (
     <>
-      <FileUpload onUpload={handleUpload} compact fileName={fileName} />
+      <FileUpload
+        onUpload={handleUpload}
+        onReject={handleReject}
+        compact
+        fileName={fileName}
+      />
 
       <div className="grid grid-cols-2 gap-2">
         <Stat label="识别作文" value={essays.length} unit="篇" />
@@ -152,18 +184,45 @@ export default function App() {
 
       {/* Header */}
       <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-3 sm:px-5">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <LogoMark className="h-7 w-7" />
-          <h1 className="truncate text-[15px] font-semibold text-slate-900">作文分栏</h1>
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
+          <button
+            type="button"
+            onClick={handleBack}
+            disabled={exporting}
+            aria-label="返回首页"
+            title="返回首页（清空当前结果）"
+            className="btn btn-ghost btn-icon -ml-1 sm:w-auto sm:px-2.5"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">返回</span>
+          </button>
+          <span className="hidden h-5 w-px bg-slate-200 sm:block" />
+          <LogoMark className="hidden h-7 w-7 sm:inline-flex" />
+          <div className="min-w-0">
+            <h1 className="truncate text-[15px] leading-tight font-semibold text-slate-900">作文分栏</h1>
+            <p className="truncate text-[11px] leading-tight text-slate-400" title={fileName}>
+              {fileName}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <FilePickerButton
+            onUpload={handleUpload}
+            onReject={handleReject}
+            disabled={exporting}
+            title="选择新文档替换当前结果"
+            className="btn btn-secondary btn-icon sm:w-auto sm:px-3"
+          >
+            <SwapIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">重新上传</span>
+          </FilePickerButton>
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="btn btn-secondary md:hidden"
+            aria-label="设置"
+            className="btn btn-secondary btn-icon md:hidden"
           >
             <SlidersIcon className="h-4 w-4" />
-            设置
           </button>
           <button
             type="button"
@@ -172,7 +231,11 @@ export default function App() {
             className="btn btn-primary"
           >
             <DownloadIcon className="h-4 w-4" />
-            {exporting ? "导出中…" : "导出 PDF"}
+            {exporting ? "导出中…" : (
+              <>
+                导出<span className="hidden sm:inline"> PDF</span>
+              </>
+            )}
           </button>
         </div>
       </header>
@@ -220,6 +283,12 @@ export default function App() {
         </main>
       </div>
 
+      {parsing && <BusyOverlay>正在解析文档…</BusyOverlay>}
+      {parseError && (
+        <Toast tone="error" onClose={() => setParseError("")}>
+          {parseError}
+        </Toast>
+      )}
       {exportMsg && <BusyOverlay>{exportMsg}</BusyOverlay>}
     </div>
   );
@@ -250,19 +319,31 @@ function BusyOverlay({ children }: { children: React.ReactNode }) {
 
 function Toast({
   tone = "neutral",
+  onClose,
   children,
 }: {
   tone?: "neutral" | "error";
+  onClose?: () => void;
   children: React.ReactNode;
 }) {
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
-      className={`fixed bottom-6 left-1/2 z-[110] w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-lg px-4 py-2.5 text-sm text-white shadow-lg ${
-        tone === "error" ? "bg-red-600" : "bg-slate-800"
-      }`}
+      className={`fixed bottom-6 left-1/2 z-[110] flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-2 rounded-lg py-2.5 pl-4 text-sm text-white shadow-lg ${
+        onClose ? "pr-2" : "pr-4"
+      } ${tone === "error" ? "bg-red-600" : "bg-slate-800"}`}
     >
-      {children}
+      <span className="min-w-0 [overflow-wrap:anywhere]">{children}</span>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="关闭提示"
+          className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-white/80 hover:bg-white/15 hover:text-white"
+        >
+          <CloseIcon className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }

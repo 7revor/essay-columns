@@ -11,23 +11,76 @@ import {
 
 interface Props {
   onUpload: (file: File) => void;
+  onReject?: (file: File) => void;
   compact?: boolean;
   fileName?: string;
 }
 
-export default function FileUpload({ onUpload, compact, fileName }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = useState(false);
+const ACCEPT = ".docx,.doc";
 
-  const handleFile = useCallback(
+function useWordFileHandler(
+  onUpload: (file: File) => void,
+  onReject?: (file: File) => void,
+) {
+  return useCallback(
     (file: File) => {
       const lower = file.name.toLowerCase();
       if (lower.endsWith(".docx") || lower.endsWith(".doc")) {
         onUpload(file);
+      } else {
+        onReject?.(file);
       }
     },
-    [onUpload],
+    [onUpload, onReject],
   );
+}
+
+/** 点击后弹出文件选择框的按钮，用于在结果页直接替换当前文档 */
+export function FilePickerButton({
+  onUpload,
+  onReject,
+  className,
+  disabled,
+  title,
+  children,
+}: Omit<Props, "compact" | "fileName"> & {
+  className?: string;
+  disabled?: boolean;
+  title?: string;
+  children: React.ReactNode;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const handleFile = useWordFileHandler(onUpload, onReject);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={disabled}
+        title={title}
+        className={className}
+      >
+        {children}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPT}
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+          e.target.value = "";
+        }}
+      />
+    </>
+  );
+}
+
+export default function FileUpload({ onUpload, onReject, compact, fileName }: Props) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const handleFile = useWordFileHandler(onUpload, onReject);
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
@@ -52,7 +105,7 @@ export default function FileUpload({ onUpload, compact, fileName }: Props) {
     <input
       ref={inputRef}
       type="file"
-      accept=".docx,.doc"
+      accept={ACCEPT}
       hidden
       onChange={onInputChange}
     />
