@@ -1,6 +1,5 @@
 import type { EssayLine } from "../types";
-import type { DocxBlock } from "./docxStructure.ts";
-import { isTitleLike, parseEssayMarker, parseMetaLine } from "./textPatterns.ts";
+import { isPureMarker, type Line } from "./lineFeatures.ts";
 
 /** 模板行在多少比例的作文中出现才算作模板。 */
 const TEMPLATE_RATIO = 0.6;
@@ -14,17 +13,13 @@ interface DraftLine {
   titleLike: boolean;
 }
 
-function draftLines(blocks: DocxBlock[]): DraftLine[] {
-  return blocks.map((block) => {
-    const meta = parseMetaLine(block.text, block.tableCells);
-    const marker = parseEssayMarker(block.text);
-    return {
-      text: meta?.text ?? block.text,
-      meta: meta !== null,
-      marker: Boolean(marker?.explicit && !marker.rest),
-      titleLike: isTitleLike(block.text),
-    };
-  });
+function draftLines(lines: Line[]): DraftLine[] {
+  return lines.map((line) => ({
+    text: line.meta?.text ?? line.text,
+    meta: line.meta !== null,
+    marker: isPureMarker(line),
+    titleLike: line.titleLike,
+  }));
 }
 
 /** 第一行正文（既非信息行/编号，也不是短标题式的行）的位置。 */
@@ -86,7 +81,7 @@ function detectTemplates(essays: DraftLine[][]): Set<string> {
 }
 
 /** 为每篇作文的每一行标注角色：个人信息、模板、编号、题目或正文。 */
-export function classifyEssayLines(segments: DocxBlock[][]): EssayLine[][] {
+export function classifyEssayLines(segments: Line[][]): EssayLine[][] {
   const drafts = segments.map(draftLines);
   const templates = detectTemplates(drafts);
 
