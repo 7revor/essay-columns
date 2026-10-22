@@ -17,17 +17,16 @@ const REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationsh
 const MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006";
 const WPS_NS = "http://schemas.microsoft.com/office/word/2010/wordprocessingShape";
 
-// 重构过程中尚未支持的场景先标为 todo，逐步实现后移除。
-const TODO = { todo: "版式识别重构中" };
-
 // ---------- 输出断言辅助 ----------
 
 /** 按应用默认设置渲染，返回用户最终看到的页头、标题和正文。 */
-function render(essays) {
+function render(essays, { titleAsFirstParagraph = true, stripInfoLines = true } = {}) {
   const patterns = detectPatterns(essays);
-  const removed = defaultRemovedIds(patterns, essays.length);
+  const removed = defaultRemovedIds(patterns);
   return essays
-    .map((essay) => filterEssay(essay, removed, patterns, true, true))
+    .map((essay) =>
+      filterEssay(essay, removed, patterns, titleAsFirstParagraph, stripInfoLines),
+    )
     .filter((content) => content.title || content.paragraphs.length > 0)
     .map((content) => ({
       header: content.header ?? "",
@@ -192,7 +191,7 @@ test("段落属性『段前分页』也视为分篇信号", async () => {
   );
 });
 
-test("批改报告模板：抬头和小节标签不当作题目，两篇也能识别", TODO, async () => {
+test("批改报告模板：抬头和小节标签不当作题目，两篇也能识别", async () => {
   const body = [1, 2]
     .map(
       (i) =>
@@ -475,7 +474,7 @@ test("题目在信息行之前的单节合并文档", () => {
   );
 });
 
-test("『第N篇』编号分隔", TODO, () => {
+test("『第N篇』编号分隔", () => {
   assert.deepEqual(
     render(parseTextEssays(repeat((i) => [`第${i}篇`, `题目${i}`, `正文${i}。`]))),
     ids.map((i) => expected("", `题目${i}`, `正文${i}。`)),
@@ -523,7 +522,7 @@ test("正文内的单个空段不切分，篇间的连续空段才切分", () =>
   );
 });
 
-test("各篇内容相同的正文句子不会被默认删除", TODO, () => {
+test("各篇内容相同的正文句子不会被默认删除", () => {
   assert.deepEqual(
     render(
       parseTextEssays(repeat((i) => [info(i), `题目${i}`, `正文${i}。`, "妈妈说：“真棒！”"])),
@@ -548,4 +547,50 @@ test("页眉与正文信息相同时只输出一次", async () => {
     await renderDocx(await makeDocx({ body, headers })),
     ids.map((i) => expected(info(i), `题目${i}`, `正文${i}。`)),
   );
+});
+
+// ---------- 角色分类与设置项 ----------
+
+test("各篇题目相同时仍识别为题目而非模板", () => {
+  assert.deepEqual(
+    render(parseTextEssays(repeat((i) => [info(i), "我的妈妈", `正文${i}。`]))),
+    ids.map((i) => expected(info(i), "我的妈妈", `正文${i}。`)),
+  );
+});
+
+test("各篇共有的结尾行作为模板默认删除", () => {
+  assert.deepEqual(
+    render(parseTextEssays(repeat((i) => [`题目${i}`, `正文${i}。`, "（完）", ""]))),
+    ids.map((i) => expected("", `题目${i}`, `正文${i}。`)),
+  );
+});
+
+test("关闭『提取个人信息』时信息行保留在正文原位置", () => {
+  const essays = parseTextEssays(repeat((i) => [`题目${i}`, info(i), `正文${i}。`]));
+  assert.deepEqual(
+    render(essays, { stripInfoLines: false }),
+    ids.map((i) => expected("", `题目${i}`, info(i), `正文${i}。`)),
+  );
+});
+
+test("关闭『首段识别为标题』时题目作为普通段落", () => {
+  const essays = parseTextEssays(repeat((i) => [info(i), `题目${i}`, `正文${i}。`]));
+  assert.deepEqual(
+    render(essays, { titleAsFirstParagraph: false }),
+    ids.map((i) => expected(info(i), "", `题目${i}`, `正文${i}。`)),
+  );
+});
+
+test("模板行可在模式面板中取消删除", () => {
+  const essays = parseTextEssays(
+    [1, 2].flatMap((i) => ["作文批改报告", info(i), `题目${i}`, `正文${i}。`]),
+  );
+  const patterns = detectPatterns(essays);
+  const template = patterns.find((p) => p.examples.includes("作文批改报告"));
+  assert.equal(template?.type, "header");
+  const kept = defaultRemovedIds(patterns);
+  kept.delete(template.id);
+  const content = filterEssay(essays[0], kept, patterns, true, true);
+  assert.equal(content.title, "题目1");
+  assert.deepEqual(content.paragraphs, ["作文批改报告", "正文1。"]);
 });

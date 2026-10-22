@@ -1,5 +1,6 @@
 import type { Essay } from "../types";
 import { readDocx, type DocxBlock, type DocxContent } from "./docxStructure.ts";
+import { classifyEssayLines } from "./essayRoles.ts";
 import { segmentBlocks } from "./segmentation.ts";
 import { parseMetaLine } from "./textPatterns.ts";
 
@@ -41,18 +42,11 @@ function buildEssays(content: DocxContent): Essay[] {
   const useHeader = (header: string) =>
     Boolean(header) && (distinctHeaders >= 2 || parseMetaLine(header) !== null);
 
-  return segments.map((segment, index) => {
-    const meta: string[] = [];
-    const paragraphs: string[] = [];
-    for (const block of blocks.slice(segment.start, segment.end)) {
-      const line = parseMetaLine(block.text, block.tableCells);
-      if (line) meta.push(line.text);
-      else paragraphs.push(block.text);
-    }
-    const header = useHeader(headers[index]) ? headers[index] : "";
-    const sourceHeader = [header, ...meta.filter((text) => text !== header)]
-      .filter(Boolean)
-      .join("  ");
-    return { delimiter: "", paragraphs, sourceHeader: sourceHeader || undefined };
-  });
+  const lines = classifyEssayLines(
+    segments.map((segment) => blocks.slice(segment.start, segment.end)),
+  );
+  return segments.map((_, index) => ({
+    lines: lines[index],
+    sourceHeader: useHeader(headers[index]) ? headers[index] : undefined,
+  }));
 }

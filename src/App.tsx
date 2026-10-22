@@ -54,7 +54,7 @@ export default function App() {
       setEssays(parsed);
       const detected = detectPatterns(parsed);
       setPatterns(detected);
-      setRemovedIds(defaultRemovedIds(detected, parsed.length));
+      setRemovedIds(defaultRemovedIds(detected));
     } catch (err) {
       setParseError(
         `解析失败: ${err instanceof Error ? err.message : "未知错误"}`,
