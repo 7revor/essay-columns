@@ -280,6 +280,35 @@ test("表格形式的个人信息栏可识别并规整为页头", async () => {
   );
 });
 
+test("每页两篇、班级在前的信息行、题目有重名", async () => {
+  // 对应真实文档：信息行“二年级（14）班  姓名：xxx”，分页符只出现在每两篇之间。
+  const titles = ["我最喜爱的积木", "我喜欢的玩具", "我喜欢的遥控车", "我最喜爱的积木", "我的小熊玩偶", "我最喜爱的积木"];
+  const tag = (i) => `二年级（14）班       姓名：学生${i}`;
+  const body = titles
+    .map(
+      (title, index) =>
+        P(tag(index + 1), { size: 19, pageBreakBefore: index > 0 && index % 2 === 0 }) +
+        P(title, { center: true, bold: true, size: 33 }) +
+        P(`正文${index + 1}第一段。`, { size: 27 }) +
+        P(`正文${index + 1}第二段。`, { size: 27 }) +
+        P(`正文${index + 1}第三段！`, { size: 27 }) +
+        (index % 2 === 0 ? P("") : ""),
+    )
+    .join("");
+  assert.deepEqual(
+    await renderDocx(await makeDocx({ body })),
+    titles.map((title, index) =>
+      expected(
+        tag(index + 1),
+        title,
+        `正文${index + 1}第一段。`,
+        `正文${index + 1}第二段。`,
+        `正文${index + 1}第三段！`,
+      ),
+    ),
+  );
+});
+
 test("标题样式的段落可作为分篇信号", async () => {
   const body = ids
     .map(
@@ -421,6 +450,19 @@ test("个人信息行：无冒号的『三年级3班 张三』", () => {
   );
 });
 
+test("个人信息行：无标签的学校、班级在『姓名：』之前", () => {
+  const line = (i) => `实验小学 三年级（2）班 姓名：学生${i}`;
+  assert.deepEqual(
+    render(parseTextEssays(repeat((i) => [line(i), `题目${i}`, `正文${i}。`]))),
+    ids.map((i) => expected(line(i), `题目${i}`, `正文${i}。`)),
+  );
+});
+
+test("班级之外的前缀不会让句子被当作信息行", () => {
+  const lines = ["我的同桌", "我们班的同学姓名：都写在黑板上。", "同桌叫小明。"];
+  assert.deepEqual(render(parseTextEssays(lines)), [expected("", ...lines)]);
+});
+
 test("个人信息行：『学生：』搭配『学校：』", () => {
   const line = (i) => `学生：学生${i}  学校：实验小学`;
   assert.deepEqual(
@@ -471,6 +513,20 @@ test("题目在信息行之前的单节合并文档", () => {
       ),
     ),
     titles.map((title, i) => expected(infoLines[i], title, `正文${i + 1}。`)),
+  );
+});
+
+test("重名题目不会被当作每篇的抬头", () => {
+  const titles = ["我最喜爱的积木", "我喜欢的玩具", "我最喜爱的积木"];
+  const lines = titles.flatMap((title, i) => [
+    ...(i > 0 ? ["", ""] : []),
+    title,
+    `正文${i + 1}第一段。`,
+    `正文${i + 1}第二段。`,
+  ]);
+  assert.deepEqual(
+    render(parseTextEssays(lines)),
+    titles.map((title, i) => expected("", title, `正文${i + 1}第一段。`, `正文${i + 1}第二段。`)),
   );
 });
 

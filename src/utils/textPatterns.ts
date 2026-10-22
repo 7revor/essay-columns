@@ -108,14 +108,24 @@ export function parseMetaLine(text: string, cells?: string[]): MetaLine | null {
     const first = matches[0];
     const leading = trimmed.slice(0, first.index).replace(/[\s　（(【[]/g, "");
     const startsWithKey = leading === "";
-    if (!startsWithKey && matches.length < 2) return null;
+    // 键前可以是无标签的学校、班级，如“二年级（14）班  姓名：张三”。
+    const prefixTokens = trimmed.slice(0, first.index).split(/[\s　]+/).filter(Boolean);
+    const classPrefix =
+      !startsWithKey &&
+      prefixTokens.every(
+        (token) => CLASS_TOKEN_RE.test(token) || SCHOOL_TOKEN_RE.test(token),
+      );
+    if (!startsWithKey && !classPrefix && matches.length < 2) return null;
 
     // 单个键后紧跟引号多为对话（如“作者：“……”），不当作信息行。
     const afterFirst = trimmed.slice(first.index! + first[0].length).trim();
     if (matches.length === 1 && /^[“"「『]/u.test(afterFirst)) return null;
     if (matches.length === 1 && trimmed.length > 40) return null;
 
-    const keys = matches.map((match) => canonicalKey(match[1] ?? match[2]));
+    const keys = [
+      ...(classPrefix ? ["#班级"] : []),
+      ...matches.map((match) => canonicalKey(match[1] ?? match[2])),
+    ];
     return {
       keys,
       person: keys.some((key) => PERSON_KEYS.includes(key)),
